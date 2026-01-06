@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100159955058",
+    "project_id": "seekr-8b019",
+    "storage_bucket": "seekr-8b019.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100159955058:android:6ad2058810c5082abba2eb",
+        "android_client_info": {
+          "package_name": "com.example.seekr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7fyq-iOvIl7-YDRE13og3eDEcpbz7VeQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
