@@ -47,4 +47,4 @@ app.*.map.json
 .env
 venv/
 __pycache__/
-
+firebase_cred.json
