@@ -39,22 +39,31 @@ class FirebaseAuthRepo implements AuthRepo{
   }
 
   // Login user with email and password
-  @override
-  Future<AppUser?> loginWithEmailPassword(String email, String password) async {
-    try {
-      UserCredential userCredential = await firebaseAuth.
-      signInWithEmailAndPassword(email: email, password: password);
+@override
+Future<AppUser?> loginWithEmailPassword(String email, String password) async {
+  try {
+    UserCredential userCredential = await firebaseAuth
+        .signInWithEmailAndPassword(email: email, password: password);
 
-      AppUser user = AppUser(
-        uid: userCredential.user!.uid, email: email
-        );
+    //  TEMP: GET FIREBASE ID TOKEN (FOR BACKEND TESTING)
+    // final firebaseUser = userCredential.user;
+    // if (firebaseUser != null) {
+    //   final idToken = await firebaseUser.getIdToken(true);
+    //   print(" FIREBASE ID TOKEN ");
+    //   print(idToken);
+    // }
 
-      return user;
+    AppUser user = AppUser(
+      uid: userCredential.user!.uid,
+      email: email,
+    );
 
-    } catch (e) {
-      throw Exception('Login failed: $e');
-    }
+    return user;
+  } catch (e) {
+    throw Exception('Login failed: $e');
   }
+}
+
 
   @override
   Future<void> logout() async {

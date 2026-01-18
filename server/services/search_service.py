@@ -15,7 +15,7 @@ async def google_search(query: str, num_results: int = 5):
         async with session.get(GOOGLE_SEARCH_URL, params=params) as response:
             data = await response.json()
             # print(data)
-            items = data.get("items", [])
+            items = data.get("items", [])[:num_results]
 
             results = []
             for item in items:

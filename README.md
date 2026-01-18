@@ -1,16 +1,37 @@
-# seekr
+# SeekrAI Backend
 
-A new Flutter project.
+## Overview
+SeekrAI is an AI-powered search assistant that combines
+Google Search with Gemini AI to generate factual answers
+with source citations.
 
-## Getting Started
+## Tech Stack
+- FastAPI
+- Firebase Authentication
+- Google Custom Search API
+- Google Gemini AI
 
-This project is a starting point for a Flutter application.
+## Features
+- Secure AI endpoints
+- Search-Augmented Generation (SAG)
+- Source attribution
+- Clean service-based architecture
 
-A few resources to get you started if this is your first Flutter project:
+## API Endpoints
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### POST /chat
+Protected endpoint that returns an AI-generated answer
+using live web search results.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Request:
+{
+  "query": "What is FastAPI?",
+  "session_id": "abc123"
+}
+
+Response:
+{
+  "answer": "...",
+  "sources": [...],
+  "user_id": "..."
+}
