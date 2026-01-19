@@ -45,7 +45,7 @@ Future<AppUser?> loginWithEmailPassword(String email, String password) async {
     UserCredential userCredential = await firebaseAuth
         .signInWithEmailAndPassword(email: email, password: password);
 
-    //  TEMP: GET FIREBASE ID TOKEN (FOR BACKEND TESTING)
+    // //  TEMP: GET FIREBASE ID TOKEN (FOR BACKEND TESTING)
     // final firebaseUser = userCredential.user;
     // if (firebaseUser != null) {
     //   final idToken = await firebaseUser.getIdToken(true);

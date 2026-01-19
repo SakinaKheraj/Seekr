@@ -1,6 +1,6 @@
 # import os
 from fastapi import FastAPI, Depends, HTTPException
-from server.services.firebase_config import initialize_firebase
+from server.services import firebase_config
 from server.services.firebase_auth_service import verify_firebase_token
 from server.pydantic_models.chat_body import ChatRequest, Source
 from server.pydantic_models.chat_response import ChatResponse
@@ -12,9 +12,10 @@ from server.services.llm_service import generate_ai_response, build_prompt
 from server.pydantic_models.llm_models import LLMRequest, LLMResponse
 from fastapi.concurrency import run_in_threadpool
 from server.services.chat_service import chat_with_search
+from server.services.database_service import save_chat_message
 
 app = FastAPI(title='SeekrAI')
-initialize_firebase()
+firebase_config.initialize_firebase()
 
 @app.get('/health')
 def health():
@@ -26,7 +27,11 @@ async def chat(
     user = Depends(verify_firebase_token)
 ):
     try:
-        answer, sources = await chat_with_search(body.query)
+        answer, sources, session_id = await chat_with_search(
+            body.query,
+            body.session_id,
+            user["uid"]
+        )
 
         return ChatResponse(
             answer=answer,
