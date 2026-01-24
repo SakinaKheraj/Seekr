@@ -13,7 +13,7 @@ def generate_ai_response(prompt: str) -> str:
     return response.text
 def build_prompt(query: str, search_results: list) -> str:
     context = ""
-    for i, r in enumerate(search_results[:3], start=1):  # Limit to 3
+    for i, r in enumerate(search_results[:3], start=1):
         context += f"""
 Source {i}:
 Title: {r['title']}
@@ -22,7 +22,6 @@ URL: {r['link']}
 ---
 """
     
-    # FIXED: This was INSIDE the for loop before!
     prompt = f"""
 You are a helpful AI assistant.
 Answer the question ONLY using the sources below.

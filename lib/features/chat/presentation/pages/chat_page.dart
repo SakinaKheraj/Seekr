@@ -5,15 +5,26 @@ import 'package:seekr/core/routes/app_routes.dart';
 import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/core/widgets/glass_text_field.dart';
 import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dart';
+import 'package:seekr/features/chat/presentation/cubit/chat_cubit.dart';
+import 'package:seekr/features/chat/presentation/cubit/chat_state.dart';
 
-class ChatPage extends StatefulWidget {
+class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(create: (_) => ChatCubit(), child: const _ChatView());
+  }
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatView extends StatefulWidget {
+  const _ChatView({super.key});
+
+  @override
+  State<_ChatView> createState() => _ChatViewState();
+}
+
+class _ChatViewState extends State<_ChatView> {
   final TextEditingController messageController = TextEditingController();
 
   @override
@@ -44,10 +55,7 @@ class _ChatPageState extends State<ChatPage> {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [
-                    MyColors.gradient1,
-                    MyColors.gradient2,
-                  ],
+                  colors: [MyColors.gradient1, MyColors.gradient2],
                 ),
               ),
               child: const Icon(
@@ -103,18 +111,20 @@ class _ChatPageState extends State<ChatPage> {
               const SizedBox(height: 70),
 
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: const [
-                    _ChatBubble(
-                      text: "Hi! How can I help you?",
-                      isUser: false,
-                    ),
-                    _ChatBubble(
-                      text: "Suggest Flutter project ideas.",
-                      isUser: true,
-                    ),
-                  ],
+                child: BlocBuilder<ChatCubit, ChatState>(
+                  builder: (context, state) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: state.messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = state.messages[index];
+                        return _ChatBubble(
+                          text: msg.text,
+                          isUser: msg.isUser,
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
 
@@ -123,7 +133,7 @@ class _ChatPageState extends State<ChatPage> {
                 onSend: () {
                   final text = messageController.text.trim();
                   if (text.isEmpty) return;
-
+                  context.read<ChatCubit>().sendMessage(text);
                   messageController.clear();
                   // later: send message via cubit
                 },
@@ -140,10 +150,7 @@ class _ChatBubble extends StatelessWidget {
   final String text;
   final bool isUser;
 
-  const _ChatBubble({
-    required this.text,
-    required this.isUser,
-  });
+  const _ChatBubble({required this.text, required this.isUser});
 
   @override
   Widget build(BuildContext context) {
@@ -156,22 +163,15 @@ class _ChatBubble extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isUser
-                ? const [
-                    MyColors.userBubbleStart,
-                    MyColors.userBubbleEnd,
-                  ]
-                : const [
-                    MyColors.botBubbleStart,
-                    MyColors.botBubbleEnd,
-                  ],
+                ? const [MyColors.userBubbleStart, MyColors.userBubbleEnd]
+                : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
           ),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           text,
           style: TextStyle(
-            color:
-                isUser ? MyColors.lightText : MyColors.primaryText,
+            color: isUser ? MyColors.lightText : MyColors.primaryText,
           ),
         ),
       ),

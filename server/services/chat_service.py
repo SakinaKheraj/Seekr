@@ -5,10 +5,8 @@ from server.pydantic_models.chat_body import Source
 from server.pydantic_models.chat_response import ChatResponse
 
 async def chat_with_search(query: str, session_id: Optional[str], user_id: str):
-    # History (non-blocking) ✅
     history = await get_session_history(user_id, session_id, limit=3)
 
-    # SAG pipeline ✅
     search_results = await google_search(query)
     prompt = build_prompt(query, search_results)
     if history:
@@ -16,7 +14,6 @@ async def chat_with_search(query: str, session_id: Optional[str], user_id: str):
     
     answer = generate_ai_response(prompt)
     
-    # Save (non-blocking) ✅
     saved_session_id = await save_chat_message(user_id, session_id, query, answer, search_results[:3])
     
     sources = [Source(title=r["title"], link=r["link"]) for r in search_results[:3]]
