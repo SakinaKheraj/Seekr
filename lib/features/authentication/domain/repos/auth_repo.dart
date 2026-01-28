@@ -1,9 +1,3 @@
-/*
-
-AUTH REPOSITORY - Outlines the possible auth operations.
-
-*/
-
 import 'package:seekr/features/authentication/domain/entities/app_user.dart';
 
 abstract class AuthRepo {
@@ -15,4 +9,5 @@ abstract class AuthRepo {
   Future<AppUser?> getCurrentUser();
   Future<String> sendPasswordResetEmail(String email);
   Future<void> deleteAccount();
+  Future<String?> getIdToken();
 }

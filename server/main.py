@@ -12,7 +12,12 @@ from server.services.llm_service import generate_ai_response, build_prompt
 from server.pydantic_models.llm_models import LLMRequest, LLMResponse
 from fastapi.concurrency import run_in_threadpool
 from server.services.chat_service import chat_with_search
-from server.services.database_service import save_chat_message
+from server.services.database_service import (
+    save_chat_message,
+    get_user_sessions,
+    get_session_history,
+    count_today_messages,
+)
 
 app = FastAPI(title='SeekrAI')
 firebase_config.initialize_firebase()
@@ -27,9 +32,16 @@ async def chat(
     user = Depends(verify_firebase_token)
 ):
     try:
-        answer, sources, session_id = await chat_with_search(
+        # enforce daily question limit (10 per day)
+        today_count = await count_today_messages(user["uid"])
+        if today_count >= 10:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily question limit (10) reached. Try again tomorrow.",
+            )
+
+        answer, sources = await chat_with_search(
             body.query,
-            body.session_id,
             user["uid"]
         )
 
@@ -40,10 +52,12 @@ async def chat(
         )
 
     except Exception as e:
+        print("CHAT ERROR:", e)  # TEMP DEBUG
         raise HTTPException(
             status_code=500,
-            detail="Something went wrong while processing your request"
+            detail=str(e)
         )
+
     
 @app.post("/search", response_model=SearchResponse)
 async def search(
@@ -63,3 +77,35 @@ async def llm(
         body.prompt
     )
     return {"answer": answer}
+
+
+@app.get("/history")
+async def history(limit: int = 1000, user=Depends(verify_firebase_token)):
+    try:
+        sessions = await get_user_sessions(user["uid"], limit=limit)
+        return sessions
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
+
+
+@app.get("/stats")
+async def stats(user=Depends(verify_firebase_token)):
+    try:
+        # fixed daily quota of 10 questions
+        total_sessions = 10
+        used_sessions = await count_today_messages(user["uid"])
+
+        return {
+            "name": user.get("name") or user.get("email", ""),
+            "email": user.get("email", ""),
+            "total_sessions": total_sessions,
+            "used_sessions": used_sessions,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )

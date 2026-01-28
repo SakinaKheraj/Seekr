@@ -11,6 +11,8 @@ def generate_ai_response(prompt: str) -> str:
         raise Exception("Empty response from Gemini")
     
     return response.text
+
+
 def build_prompt(query: str, search_results: list) -> str:
     context = ""
     for i, r in enumerate(search_results[:3], start=1):
@@ -32,6 +34,6 @@ Question: {query}
 Sources:
 {context}
 
-Answer in simple language. Cite sources like [Source 1].
+Answer in simple, friendly language. Do NOT mention or cite source numbers.
 """
     return prompt

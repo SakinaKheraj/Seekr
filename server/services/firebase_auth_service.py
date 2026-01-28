@@ -7,7 +7,7 @@ security = HTTPBearer()
 def verify_firebase_token(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    token = credentials.credentials 
+    token = credentials.credentials
 
     try:
         decoded_token = auth.verify_id_token(token)

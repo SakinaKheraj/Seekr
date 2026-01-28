@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/features/authentication/presentation/components/my_button.dart';
 import 'package:seekr/features/authentication/presentation/components/my_textfield.dart';
 import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dart';
@@ -29,7 +28,7 @@ class _ForgetPassState extends State<ForgetPass> {
           listener: (context, state) {
             if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.msg)),
+                SnackBar(content: Text(state.message)),
               );
             }
           },
@@ -80,11 +79,13 @@ class _ForgetPassState extends State<ForgetPass> {
                   final email = emailController.text.trim();
                   if (email.isEmpty) return;
 
-                  final msg = await context
-                      .read<AuthCubit>()
-                      .forgotPassword(email);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final authCubit = context.read<AuthCubit>();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  final msg = await authCubit.forgotPassword(email);
+
+                  if (!mounted) return;
+                  messenger.showSnackBar(
                     SnackBar(content: Text(msg)),
                   );
                 },

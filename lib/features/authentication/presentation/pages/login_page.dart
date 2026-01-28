@@ -6,6 +6,7 @@ import 'package:seekr/features/authentication/presentation/components/my_button.
 import 'package:seekr/features/authentication/presentation/components/my_textfield.dart';
 import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dart';
 import 'package:seekr/features/authentication/presentation/pages/forget_pass.dart';
+import 'package:seekr/features/authentication/presentation/cubits/auth_states.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function()? togglePages;
@@ -21,8 +22,16 @@ class _LoginPageState extends State<LoginPage> {
   final confirmpassController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+Widget build(BuildContext context) {
+  return BlocListener<AuthCubit, AuthState>(
+    listener: (context, state) {
+      if (state is AuthError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(state.message)),
+        );
+      }
+    },
+    child: Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.only(top: 20, left: 25, right: 25),
@@ -39,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 50),
 
-              // Email textfield
+              // Email
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -60,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 15),
 
-              // Password textfield
+              // Password
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -88,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ForgetPass(),
+                        builder: (_) => const ForgetPass(),
                       ),
                     );
                   },
@@ -105,16 +114,31 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 25),
 
-              MyButton(
-                onTap: () {
-                  final email = emailController.text.trim();
-                  final password = passwordController.text.trim();
+              /// 🔥 BUTTON REACTS TO STATE
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (context, state) {
+                  return MyButton(
+                    onTap: state is AuthLoading
+                        ? null
+                        : () {
+                            final email =
+                                emailController.text.trim();
+                            final password =
+                                passwordController.text.trim();
 
-                  if (email.isEmpty || password.isEmpty) return;
+                            if (email.isEmpty || password.isEmpty) {
+                              return;
+                            }
 
-                  context.read<AuthCubit>().login(email, password);
+                            context
+                                .read<AuthCubit>()
+                                .login(email, password);
+                          },
+                    text: state is AuthLoading
+                        ? 'Signing In...'
+                        : 'Sign In',
+                  );
                 },
-                text: 'Sign In',
               ),
 
               const SizedBox(height: 25),
@@ -124,10 +148,11 @@ class _LoginPageState extends State<LoginPage> {
                 child: RichText(
                   text: TextSpan(
                     text: 'Don\'t have an account? ',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style:
+                        Theme.of(context).textTheme.titleMedium,
                     children: [
                       TextSpan(
-                        text: 'Sign Up  ',
+                        text: 'Sign Up',
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
@@ -144,6 +169,8 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

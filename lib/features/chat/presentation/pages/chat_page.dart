@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:seekr/core/routes/app_routes.dart';
 import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/core/widgets/glass_text_field.dart';
+import 'package:seekr/features/authentication/domain/repos/auth_repo.dart';
 import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dart';
+import 'package:seekr/features/chat/data/chat_service.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_cubit.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_state.dart';
 
@@ -13,12 +16,31 @@ class ChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(create: (_) => ChatCubit(), child: const _ChatView());
+    final authRepo = context.read<AuthRepo>();
+
+    return BlocProvider(
+      create: (_) => ChatCubit(
+        chatService: ChatService(authRepo: authRepo),
+      ),
+      child: BlocListener<ChatCubit, ChatState>(
+        listener: (context, state) {
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+        },
+        child: const _ChatView(),
+      ),
+    );
   }
 }
 
 class _ChatView extends StatefulWidget {
-  const _ChatView({super.key});
+  const _ChatView();
 
   @override
   State<_ChatView> createState() => _ChatViewState();
@@ -158,21 +180,48 @@ class _ChatBubble extends StatelessWidget {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: const BoxConstraints(maxWidth: 260),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isUser
-                ? const [MyColors.userBubbleStart, MyColors.userBubbleEnd]
-                : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isUser ? MyColors.lightText : MyColors.primaryText,
-          ),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 36, 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isUser
+                      ? const [MyColors.userBubbleStart, MyColors.userBubbleEnd]
+                      : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: isUser ? MyColors.lightText : MyColors.primaryText,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 2,
+              right: 2,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  Icons.copy,
+                  size: 16,
+                  color: isUser ? MyColors.iconLight : MyColors.secondaryText,
+                ),
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: text));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Copied')),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
