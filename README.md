@@ -1,37 +1,105 @@
-# SeekrAI Backend
 
-## Overview
-SeekrAI is an AI-powered search assistant that combines
-Google Search with Gemini AI to generate factual answers
-with source citations.
+# 🚀 Seekr
 
-## Tech Stack
-- FastAPI
-- Firebase Authentication
-- Google Custom Search API
-- Google Gemini AI
+Seekr is a cross-platform chat application built using **Flutter** with a scalable backend powered by **FastAPI**.
+The project is designed with a strong focus on **clean architecture**, **state management**, and **maintainable code structure**, making it suitable for real-world production use.
 
-## Features
-- Secure AI endpoints
-- Search-Augmented Generation (SAG)
-- Source attribution
-- Clean service-based architecture
+---
 
-## API Endpoints
+## 📱 Overview
 
-### POST /chat
-Protected endpoint that returns an AI-generated answer
-using live web search results.
+Seekr aims to provide a modern chat experience with an emphasis on:
 
-Request:
-{
-  "query": "What is FastAPI?",
-  "session_id": "abc123"
-}
+* Clean and intuitive UI
+* Scalable application architecture
+* Clear separation of concerns between UI, business logic, and data layers
+* Easy integration of AI-powered features and backend services
 
-Response:
-{
-  "answer": "...",
-  "sources": [...],
-  "user_id": "..."
-}
+The application follows best practices in both frontend and backend development to ensure long-term maintainability and extensibility.
+
+---
+
+## 🧠 Architecture
+
+### Frontend (Flutter)
+
+* Feature-based folder structure
+* State management using **Bloc / Cubit**
+* UI components are kept separate from business logic
+* Designed to support clean architecture principles
+
+```text
+features/
+ ├── authentication/
+ ├── chat/
+ ├── history/
+ └── profile/
+```
+
+Each feature encapsulates its own UI and state logic, allowing independent development and testing.
+
+---
+
+### Backend (FastAPI)
+
+* Service-oriented backend structure
+* Request and response validation using Pydantic
+* Modular design to support scalability and easy feature extension
+
+```text
+server/
+ ├── models/
+ ├── services/
+ ├── config/
+ └── main.py
+```
+
+---
+
+## 🧰 Tech Stack
+
+### Frontend
+
+* Flutter
+* Dart
+* flutter_bloc
+* Firebase Authentication
+* Google Fonts
+
+### Backend
+
+* FastAPI
+* Python
+* Pydantic
+* Firebase
+* AI model integration support
+
+---
+
+## 🎯 Design Principles
+
+* Clean Architecture
+* Separation of concerns
+* State-driven UI
+* Reusability and scalability
+* Maintainable and readable codebase
+
+---
+
+## 🛠 Development Approach
+
+* Feature-first development
+* Architecture-first mindset
+* Incremental integration of backend services
+* Clear boundaries between presentation, domain, and data layers
+
+---
+
+## 📌 Project Structure
+
+The project is organized to support:
+
+* Independent feature development
+* Easy testing and debugging
+* Future enhancements without major refactoring
+
