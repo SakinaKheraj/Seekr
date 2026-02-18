@@ -28,7 +28,7 @@ class HistoryCubit extends Cubit<HistoryState> {
           sessions: sessions,
           isLoading: false,
           error: null,
-        ),
+            ),
       );
     } catch (e) {
       emit(
@@ -36,7 +36,7 @@ class HistoryCubit extends Cubit<HistoryState> {
           isLoading: false,
           error: e.toString(),
         ),
-      );
+    );
     }
   }
 }

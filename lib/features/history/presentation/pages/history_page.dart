@@ -210,7 +210,7 @@ class _HistoryTile extends StatelessWidget {
             icon: const Icon(
               Icons.copy,
               size: 16,
-              color: MyColors.secondaryText,
+            color: MyColors.secondaryText,
             ),
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);

@@ -185,19 +185,19 @@ class _ChatBubble extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(14, 10, 36, 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isUser
-                      ? const [MyColors.userBubbleStart, MyColors.userBubbleEnd]
-                      : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isUser ? MyColors.lightText : MyColors.primaryText,
-                ),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isUser
+                ? const [MyColors.userBubbleStart, MyColors.userBubbleEnd]
+                : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isUser ? MyColors.lightText : MyColors.primaryText,
+          ),
               ),
             ),
             Positioned(

@@ -8,7 +8,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit({required ProfileService profileService})
       : _profileService = profileService,
         super(
-          ProfileState(
+      ProfileState(
             name: '',
             email: '',
             totalSessions: 0,
@@ -30,8 +30,8 @@ class ProfileCubit extends Cubit<ProfileState> {
           usedSessions: data['used_sessions'] as int? ?? 0,
           isLoading: false,
           error: null,
-        ),
-      );
+      ),
+    );
     } catch (e) {
       emit(
         state.copyWith(

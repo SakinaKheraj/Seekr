@@ -13,4 +13,5 @@ def verify_firebase_token(
         decoded_token = auth.verify_id_token(token)
         return decoded_token
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        print(f" AUTH ERROR: {str(e)}")
+        raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")

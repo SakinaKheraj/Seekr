@@ -19,7 +19,17 @@ from server.services.database_service import (
     count_today_messages,
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title='SeekrAI')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 firebase_config.initialize_firebase()
 
 @app.get('/health')
