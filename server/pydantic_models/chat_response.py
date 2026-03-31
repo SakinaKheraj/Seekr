@@ -5,4 +5,5 @@ from .chat_body import Source
 class ChatResponse(BaseModel):
     answer: str
     sources: List[Source]
+    followups: List[str] = []
     user_id: str

@@ -48,11 +48,32 @@ class _ChatView extends StatefulWidget {
 
 class _ChatViewState extends State<_ChatView> {
   final TextEditingController messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _sendMessage(BuildContext context, String text) {
+    if (text.trim().isEmpty) return;
+    context.read<ChatCubit>().sendMessage(text);
+    messageController.clear();
+    _scrollToBottom();
   }
 
   @override
@@ -128,45 +149,224 @@ class _ChatViewState extends State<_ChatView> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 70),
+          child: BlocConsumer<ChatCubit, ChatState>(
+            listener: (context, state) {
+              // Auto-scroll whenever messages or loading state changes
+              _scrollToBottom();
+            },
+            builder: (context, state) {
+              return Column(
+                children: [
+                  const SizedBox(height: 70),
 
-              Expanded(
-                child: BlocBuilder<ChatCubit, ChatState>(
-                  builder: (context, state) {
-                    return ListView.builder(
+                  // ── Message list ──────────────────────────────────────
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: state.messages.length,
+                      itemCount: state.messages.length +
+                          (state.isLoading ? 1 : 0),  // +1 for typing indicator
                       itemBuilder: (context, index) {
+                        if (index == state.messages.length && state.isLoading) {
+                          return const _TypingIndicator();
+                        }
                         final msg = state.messages[index];
                         return _ChatBubble(
                           text: msg.text,
                           isUser: msg.isUser,
                         );
                       },
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
 
-              GlassChatField(
-                controller: messageController,
-                onSend: () {
-                  final text = messageController.text.trim();
-                  if (text.isEmpty) return;
-                  context.read<ChatCubit>().sendMessage(text);
-                  messageController.clear();
-                  // later: send message via cubit
-                },
-              ),
-            ],
+                  // ── Follow-up chips ───────────────────────────────────
+                  if (state.followups.isNotEmpty)
+                    _FollowupChipsRow(
+                      followups: state.followups,
+                      onTap: (q) => _sendMessage(context, q),
+                    ),
+
+                  // ── Input field ───────────────────────────────────────
+                  GlassChatField(
+                    controller: messageController,
+                    onSend: () => _sendMessage(context, messageController.text.trim()),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 }
+
+// ── Typing indicator widget ────────────────────────────────────────────────────
+
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with TickerProviderStateMixin {
+  late final List<AnimationController> _controllers;
+  late final List<Animation<double>> _animations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(3, (i) {
+      return AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 500),
+      )
+        ..repeat(reverse: true, period: const Duration(milliseconds: 900));
+    });
+
+    // stagger each dot by 200 ms
+    for (var i = 0; i < 3; i++) {
+      Future.delayed(Duration(milliseconds: i * 200), () {
+        if (mounted) {
+          _controllers[i].repeat(reverse: true);
+        }
+      });
+    }
+
+    _animations = _controllers
+        .map((c) => Tween<double>(begin: 0.4, end: 1.0).animate(
+              CurvedAnimation(parent: c, curve: Curves.easeInOut),
+            ))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [MyColors.botBubbleStart, MyColors.botBubbleEnd],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            return AnimatedBuilder(
+              animation: _animations[i],
+              builder: (context, child) => Opacity(
+                opacity: _animations[i].value,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: MyColors.primaryText,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Follow-up chips row ────────────────────────────────────────────────────────
+
+class _FollowupChipsRow extends StatelessWidget {
+  final List<String> followups;
+  final void Function(String) onTap;
+
+  const _FollowupChipsRow({
+    required this.followups,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: followups
+              .where((q) => q.isNotEmpty)
+              .map((q) => _FollowupChip(question: q, onTap: () => onTap(q)))
+              .toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _FollowupChip extends StatelessWidget {
+  final String question;
+  final VoidCallback onTap;
+
+  const _FollowupChip({required this.question, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [MyColors.gradient1, MyColors.gradient2],
+          ),
+          backgroundBlendMode: BlendMode.srcOver,
+          border: Border.all(
+            color: MyColors.glassBorder,
+            width: 1,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: MyColors.shadowLight,
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bolt, size: 14, color: MyColors.iconLight),
+            const SizedBox(width: 6),
+            Text(
+              question,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: MyColors.lightText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Chat bubble ────────────────────────────────────────────────────────────────
 
 class _ChatBubble extends StatelessWidget {
   final String text;

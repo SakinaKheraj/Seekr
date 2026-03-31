@@ -50,7 +50,7 @@ async def chat(
                 detail="Daily question limit (10) reached. Try again tomorrow.",
             )
 
-        answer, sources = await chat_with_search(
+        answer, sources, followups = await chat_with_search(
             body.query,
             user["uid"]
         )
@@ -58,6 +58,7 @@ async def chat(
         return ChatResponse(
             answer=answer,
             sources=sources,
+            followups=followups,
             user_id=user["uid"]
         )
 

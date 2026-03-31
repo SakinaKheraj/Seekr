@@ -22,8 +22,8 @@ class ChatService {
   }) : _dio = dio ?? Dio(),
         _authRepo = authRepo;
 
-  // sends a chat query to the backend and returns the response
-  Future<String> sendQuery(String query) async {
+  // sends a chat query to the backend and returns the answer + follow-up suggestions
+  Future<({String answer, List<String> followups})> sendQuery(String query) async {
     try {
       // Get firebase id token
       final token = await _authRepo.getIdToken();
@@ -48,7 +48,13 @@ class ChatService {
     );
 
     final data = response.data as Map<String, dynamic>;
-    return data['answer'] ?? 'No response from AI';
+    final answer = data['answer'] as String? ?? 'No response from AI';
+    final rawFollowups = data['followups'];
+    final followups = (rawFollowups is List)
+        ? rawFollowups.whereType<String>().where((q) => q.isNotEmpty).toList()
+        : <String>[];
+
+    return (answer: answer, followups: followups);
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {

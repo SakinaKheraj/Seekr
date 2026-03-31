@@ -1,8 +1,9 @@
 import firebase_admin
 from firebase_admin import firestore
 from datetime import datetime, timezone, date
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from fastapi.concurrency import run_in_threadpool
+from server.services.llm_service import generate_session_title
 
 
 def get_firestore_client():
@@ -13,7 +14,8 @@ def get_firestore_client():
 
 
 # 🔑 BACKEND-MANAGED SESSION
-def get_or_create_active_session(user_id: str) -> str:
+def get_or_create_active_session(user_id: str) -> Tuple[str, bool]:
+    """Returns (session_id, is_new_session)."""
     db = get_firestore_client()
 
     docs = (
@@ -25,10 +27,10 @@ def get_or_create_active_session(user_id: str) -> str:
     )
 
     for doc in docs:
-        return doc.to_dict()["session_id"]
+        return doc.to_dict()["session_id"], False
 
     # no previous session → create new
-    return f"session_{user_id}_{int(datetime.now().timestamp())}"
+    return f"session_{user_id}_{int(datetime.now().timestamp())}", True
 
 
 def save_chat_sync(
@@ -38,7 +40,10 @@ def save_chat_sync(
     sources: List[Dict]
 ):
     db = get_firestore_client()
-    session_id = get_or_create_active_session(user_id)
+    session_id, is_new_session = get_or_create_active_session(user_id)
+
+    # Generate a human-readable title only once, when the session is first created
+    session_title = generate_session_title(query) if is_new_session else None
 
     doc_data = {
         "user_id": user_id,
@@ -47,9 +52,11 @@ def save_chat_sync(
         "answer": answer,
         "sources": sources,
         "timestamp": firestore.SERVER_TIMESTAMP,
-        # Store an ISO timestamp with timezone so string parsing + comparisons are consistent.
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+
+    if session_title:
+        doc_data["session_title"] = session_title
 
     db.collection("chats").add(doc_data)
 
@@ -96,13 +103,18 @@ async def get_user_sessions(user_id: str, limit: int = 10):
     for chat in history:
         sid = chat["session_id"]
         if sid not in sessions:
+            # Prefer the stored Gemini-generated title; fall back to truncated query
+            title = chat.get("session_title") or (chat["query"][:80] + "...")
             sessions[sid] = {
                 "session_id": sid,
-                "last_message": chat["query"][:80] + "...",
+                "last_message": title,
                 "timestamp": chat.get("created_at"),
                 "message_count": 0,
                 "source_count": 0,
             }
+        elif chat.get("session_title") and not sessions[sid]["last_message"]:
+            # pick up the title from any msg in the session that has it
+            sessions[sid]["last_message"] = chat["session_title"]
 
         sessions[sid]["message_count"] += 1
         sources = chat.get("sources") or []

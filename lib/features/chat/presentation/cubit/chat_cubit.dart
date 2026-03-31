@@ -12,7 +12,7 @@ class ChatCubit extends Cubit<ChatState>{
     Future<void> sendMessage(String text) async {
       if(text.trim().isEmpty) return;
 
-      // add user message to state
+      // add user message to state and clear previous follow-ups
       final updatedMessages = List<ChatMessage>.from(state.messages)
         ..add(ChatMessage(text: text, isUser: true));
 
@@ -20,25 +20,28 @@ class ChatCubit extends Cubit<ChatState>{
         messages: updatedMessages,
         isLoading: true,
         error: null,
+        followups: [],
       ));
 
       try {
-        // call backend chat service
-        final aiResponse = await chatService.sendQuery(text);
+        // call backend chat service — returns record with answer + followups
+        final result = await chatService.sendQuery(text);
 
         // add ai response to state
         final newMessages = List<ChatMessage>.from(state.messages)
-          ..add(ChatMessage(text: aiResponse, isUser: false));
+          ..add(ChatMessage(text: result.answer, isUser: false));
 
         emit(state.copyWith(
           messages: newMessages,
           isLoading: false,
           error: null,
+          followups: result.followups,
         ));
       } catch (e) {
         emit(state.copyWith(
           isLoading: false,
           error: e.toString(),
+          followups: [],
         ));
       }
     }
