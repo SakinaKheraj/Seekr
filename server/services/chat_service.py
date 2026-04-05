@@ -1,7 +1,11 @@
 import asyncio
 from fastapi.concurrency import run_in_threadpool
 from server.services.search_service import google_search
-from server.services.llm_service import generate_ai_response, build_prompt, generate_followups
+from server.services.llm_service import (
+    generate_ai_response, 
+    build_prompt, 
+    generate_answer_and_followups
+)
 from server.services.database_service import (
     save_chat_message,
     get_session_history
@@ -14,7 +18,8 @@ async def chat_with_search(query: str, user_id: str):
     history = await get_session_history(user_id, limit=3)
 
     search_results = await google_search(query)
-    prompt = build_prompt(query, search_results)
+    # Optimization: One prompt for both answer and followups
+    prompt = build_prompt(query, search_results, include_followups=True)
 
     if history:
         prompt = (
@@ -26,19 +31,11 @@ async def chat_with_search(query: str, user_id: str):
             + prompt
         )
 
-    # Run the initial Gemini generation in a thread so it doesn't block the API
-    answer = await run_in_threadpool(generate_ai_response, prompt)
+    # Combined generation: Answer + 3 Followups
+    answer, followups = await run_in_threadpool(generate_answer_and_followups, prompt)
 
-    async def get_followups():
-        try:
-            return await run_in_threadpool(generate_followups, query, answer)
-        except Exception as e:
-            print("Followup Gen Error:", e)
-            return []
-
-    # Run followup generation and database saving simultaneously to cut latency in half
-    task_followups = asyncio.create_task(get_followups())
-    task_save = asyncio.create_task(
+    # Save to database (fire and forget task for saving, while we return results)
+    asyncio.create_task(
         save_chat_message(
             user_id=user_id,
             query=query,
@@ -47,11 +44,11 @@ async def chat_with_search(query: str, user_id: str):
         )
     )
 
-    followups, _ = await asyncio.gather(task_followups, task_save)
-
     sources = [
         Source(title=r["title"], link=r["link"])
         for r in search_results[:3]
     ]
 
     return answer, sources, followups
+
+    

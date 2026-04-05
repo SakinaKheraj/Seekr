@@ -30,16 +30,43 @@ class _HistoryView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'History',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: MyColors.primaryText,
-          ),
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          color: MyColors.iconDark,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [MyColors.gradient1, MyColors.gradient2],
+                ),
+              ),
+              child: const Icon(
+                Icons.history,
+                color: MyColors.iconLight,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'History',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: MyColors.primaryText,
+              ),
+            ),
+          ],
         ),
       ),
       body: Container(
@@ -54,16 +81,16 @@ class _HistoryView extends StatelessWidget {
             ],
           ),
         ),
+        child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 70),
             ///  Session count
             BlocBuilder<HistoryCubit, HistoryState>(
               builder: (context, state) {
                 if (state.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 if (state.error != null) {
@@ -113,6 +140,7 @@ class _HistoryView extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -140,10 +168,7 @@ class _HistoryTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: MyColors.glassBorder),
         boxShadow: const [
-          BoxShadow(
-            color: MyColors.shadowLight,
-            blurRadius: 12,
-          ),
+          BoxShadow(color: MyColors.shadowLight, blurRadius: 12),
         ],
       ),
       child: Row(
@@ -154,10 +179,7 @@ class _HistoryTile extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  MyColors.gradient1,
-                  MyColors.gradient2,
-                ],
+                colors: [MyColors.gradient1, MyColors.gradient2],
               ),
             ),
             child: const Icon(
@@ -189,10 +211,7 @@ class _HistoryTile extends StatelessWidget {
                       label: '$messageCount msgs',
                     ),
                     const SizedBox(width: 8),
-                    _MetaChip(
-                      icon: Icons.link,
-                      label: '$sourceCount sources',
-                    ),
+                    _MetaChip(icon: Icons.link, label: '$sourceCount sources'),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -210,7 +229,7 @@ class _HistoryTile extends StatelessWidget {
             icon: const Icon(
               Icons.copy,
               size: 16,
-            color: MyColors.secondaryText,
+              color: MyColors.secondaryText,
             ),
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
@@ -230,10 +249,7 @@ class _MetaChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-  });
+  const _MetaChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {

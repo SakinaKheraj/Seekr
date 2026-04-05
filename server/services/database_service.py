@@ -13,7 +13,7 @@ def get_firestore_client():
         raise Exception("Firebase Admin SDK not initialized")
 
 
-# 🔑 BACKEND-MANAGED SESSION
+#  BACKEND-MANAGED SESSION
 def get_or_create_active_session(user_id: str) -> Tuple[str, bool]:
     """Returns (session_id, is_new_session)."""
     db = get_firestore_client()
@@ -124,26 +124,31 @@ async def get_user_sessions(user_id: str, limit: int = 10):
 
 
 async def count_today_messages(user_id: str) -> int:
-    """Count how many chat messages the user has sent today (UTC).
-
-    Uses stored `created_at` ISO string for compatibility with existing docs.
+    """Count how many chat messages the user has sent today (UTC) using a targeted query.
+    
+    This is much more efficient than fetching the full history.
     """
-    history = await get_session_history(user_id, limit=1000)
-    today_utc = datetime.now(timezone.utc).date()
+    db = get_firestore_client()
+    # Get the start of the current day in UTC
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    
+    # Query for documents created today
+    query = (
+        db.collection("chats")
+        .where("user_id", "==", user_id)
+        .where("timestamp", ">=", today_start)
+    )
+    
+    # Use count() aggregation for maximum efficiency (supported in newer firebase-admin)
+    try:
+        # Note: count() might require an index on (user_id, timestamp)
+        count_query = query.count()
+        results = count_query.get()
+        return results[0][0].value
+    except Exception:
+        # Fallback if count() is not available or index missing
+        docs = query.stream()
+        return sum(1 for _ in docs)
 
-    count = 0
-    for h in history:
-        created_at = h.get("created_at")
-        if not created_at:
-            continue
-        try:
-            # Handle both "2026-01-28T..." and "2026-01-28T...+00:00"
-            dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            if dt.astimezone(timezone.utc).date() == today_utc:
-                count += 1
-        except Exception:
-            continue
-
-    return count

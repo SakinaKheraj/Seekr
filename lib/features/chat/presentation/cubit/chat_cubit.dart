@@ -29,7 +29,12 @@ class ChatCubit extends Cubit<ChatState>{
 
         // add ai response to state
         final newMessages = List<ChatMessage>.from(state.messages)
-          ..add(ChatMessage(text: result.answer, isUser: false));
+          ..add(ChatMessage(
+            text: result.answer, 
+            isUser: false,
+            originalQuery: text,
+            sources: result.sources,
+          ));
 
         emit(state.copyWith(
           messages: newMessages,

@@ -57,7 +57,7 @@ def generate_ai_response(prompt: str) -> str:
     raise Exception(f"All AI models failed.\n{error_summary}")
 
 
-def build_prompt(query: str, search_results: list) -> str:
+def build_prompt(query: str, search_results: list, include_followups: bool = False) -> str:
     context = ""
     for i, r in enumerate(search_results[:3], start=1):
         context += f"""
@@ -80,28 +80,90 @@ Sources:
 
 Answer in simple, friendly language. Do NOT mention or cite source numbers.
 """
+    if include_followups:
+        prompt += """
+After your answer, add exactly one line: FOLLOWUP_SECTION
+Then, suggest exactly 3 short follow-up questions that the user might want to ask next.
+- Each question must be on a new line.
+- No numbering, no bullet points, no extra text.
+- Each question must be under 10 words.
+"""
     return prompt
 
 
-def generate_session_title(first_query: str) -> str:
-    """Generate a short, readable session title from the first user query."""
-    prompt = (
-        f"Give a 5-word title (no punctuation, no quotes) for a search session "
-        f"that starts with this question: {first_query}\n"
-        f"Reply with ONLY the title, nothing else."
-    )
+def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
+    """Generates an AI response and extracts follow-up questions to save requests."""
+    last_error_info = []
+
     for model_name in MODELS_TO_TRY:
         try:
+            print(f" TRACK: Attempting AI response with {model_name}...")
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
-            if response and response.text:
-                title = response.text.strip().strip('"').strip("'")
-                # keep it under 60 chars
-                return title[:60] if title else first_query[:60]
-        except Exception:
+
+            if not response or not response.candidates:
+                msg = f"{model_name}: no candidates returned."
+                print(f" {msg}")
+                last_error_info.append(msg)
+                continue
+
+            candidate = response.candidates[0]
+            if candidate.finish_reason == 3: # SAFETY
+                msg = f"{model_name}: blocked by safety filters."
+                print(f" {msg}")
+                last_error_info.append(msg)
+                continue
+
+            try:
+                full_text = response.text
+                if not full_text:
+                    continue
+
+                answer = full_text
+                followups = []
+                
+                if "FOLLOWUP_SECTION" in full_text:
+                    parts = full_text.split("FOLLOWUP_SECTION")
+                    answer = parts[0].strip()
+                    if len(parts) > 1:
+                        followups = [
+                            f.strip().lstrip("-").lstrip("*").strip()
+                            for f in parts[1].strip().splitlines()
+                            if f.strip()
+                        ][:3]
+
+                # pad with empty strings up to 3
+                while followups and len(followups) < 3:
+                    followups.append("")
+
+                print(f" SUCCESS with {model_name}")
+                return answer, followups
+
+            except Exception as e:
+                msg = f"{model_name}: text extraction failed: {str(e)}"
+                print(f" {msg}")
+                last_error_info.append(msg)
+                continue
+
+        except Exception as e:
+            msg = f"{model_name} error: {str(e)}"
+            print(f" {msg}")
+            last_error_info.append(msg)
             continue
-    # fallback: truncate the raw query
-    return first_query[:60]
+
+    error_summary = "\n".join(last_error_info)
+    raise Exception(f"All AI models failed.\n{error_summary}")
+
+
+def generate_session_title(first_query: str) -> str:
+    """Simple non-AI title generation to save quota."""
+    # Take first 6 words and capitalize
+    words = first_query.split()
+    title = " ".join(words[:6])
+    if len(words) > 6:
+        title += "..."
+    # capitalize first letter
+    return title[:1].upper() + title[1:] if title else "New Session"
 
 
 def generate_followups(query: str, answer: str) -> List[str]:

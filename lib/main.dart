@@ -8,6 +8,9 @@ import 'package:seekr/features/authentication/presentation/pages/auth_gate.dart'
 import 'package:seekr/features/chat/presentation/pages/chat_page.dart';
 import 'package:seekr/features/history/presentation/pages/history_page.dart';
 import 'package:seekr/features/profile/presentation/pages/profile_page.dart';
+import 'package:seekr/features/collections/presentation/pages/collections_page.dart';
+import 'package:seekr/features/collections/data/collections_service.dart';
+import 'package:seekr/features/collections/presentation/cubits/collections_cubit.dart';
 import 'package:seekr/firebase_options.dart';
 import 'package:seekr/core/routes/app_routes.dart';
 
@@ -34,6 +37,11 @@ class MyApp extends StatelessWidget {
             create: (_) =>
                 AuthCubit(authRepo: _firebaseAuthRepo)..listenToAuthChanges(),
           ),
+          BlocProvider<CollectionsCubit>(
+            create: (_) => CollectionsCubit(
+              collectionsService: CollectionsService(authRepo: _firebaseAuthRepo),
+            )..loadCollections(),
+          ),
         ],
         child: MaterialApp(
           title: 'Flutter Demo',
@@ -45,6 +53,7 @@ class MyApp extends StatelessWidget {
             AppRoutes.chat: (context) => const ChatPage(),
             AppRoutes.history: (context) => const HistoryPage(),
             AppRoutes.profile: (context) => const ProfilePage(),
+            AppRoutes.collections: (context) => const CollectionsPage(),
           },
           home: const AuthGate(),
         ),

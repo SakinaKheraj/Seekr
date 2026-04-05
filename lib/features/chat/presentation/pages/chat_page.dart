@@ -10,6 +10,7 @@ import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dar
 import 'package:seekr/features/chat/data/chat_service.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_cubit.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_state.dart';
+import 'package:seekr/features/collections/presentation/cubits/collections_cubit.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -120,6 +121,13 @@ class _ChatViewState extends State<_ChatView> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.bookmark_border),
+            color: MyColors.iconDark,
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.collections);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             color: MyColors.iconDark,
             onPressed: () {
@@ -174,6 +182,8 @@ class _ChatViewState extends State<_ChatView> {
                         return _ChatBubble(
                           text: msg.text,
                           isUser: msg.isUser,
+                          originalQuery: msg.originalQuery ?? '',
+                          sources: msg.sources ?? [],
                         );
                       },
                     ),
@@ -371,8 +381,84 @@ class _FollowupChip extends StatelessWidget {
 class _ChatBubble extends StatelessWidget {
   final String text;
   final bool isUser;
+  final String originalQuery;
+  final List<Map<String, dynamic>> sources;
 
-  const _ChatBubble({required this.text, required this.isUser});
+  const _ChatBubble({
+    required this.text, 
+    required this.isUser,
+    this.originalQuery = '',
+    this.sources = const [],
+  });
+
+  void _showBookmarkSheet(BuildContext context) {
+    final folderController = TextEditingController(text: 'Favorites');
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: MyColors.backgroundMid,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(bContext).viewInsets.bottom,
+          left: 20, right: 20, top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Save Bookmark',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: MyColors.primaryText,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: folderController,
+              style: const TextStyle(color: MyColors.primaryText),
+              decoration: InputDecoration(
+                labelText: 'Folder Name',
+                labelStyle: const TextStyle(color: MyColors.secondaryText),
+                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: MyColors.glassBorder)),
+                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: MyColors.gradient2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyColors.gradient1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  final folder = folderController.text.trim();
+                  if (folder.isNotEmpty) {
+                    context.read<CollectionsCubit>().saveBookmark(
+                      folderName: folder,
+                      query: originalQuery,
+                      answer: text,
+                      sources: sources,
+                    );
+                    Navigator.pop(bContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Saved to $folder')),
+                    );
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -380,11 +466,7 @@ class _ChatBubble extends StatelessWidget {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        constraints: const BoxConstraints(maxWidth: 260),
-        child: Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 36, 10),
+        constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isUser
@@ -392,33 +474,58 @@ class _ChatBubble extends StatelessWidget {
                 : const [MyColors.botBubbleStart, MyColors.botBubbleEnd],
           ),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: MyColors.shadowLight,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isUser ? MyColors.lightText : MyColors.primaryText,
-          ),
+        padding: const EdgeInsets.fromLTRB(14, 10, 10, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isUser ? MyColors.lightText : MyColors.primaryText,
+                fontSize: 15,
+                height: 1.4,
               ),
             ),
-            Positioned(
-              top: 2,
-              right: 2,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  Icons.copy,
-                  size: 16,
-                  color: isUser ? MyColors.iconLight : MyColors.secondaryText,
-                ),
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: text));
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Copied')),
-                  );
-                },
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isUser)
+                    InkWell(
+                      onTap: () => _showBookmarkSheet(context),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(Icons.bookmark_add_outlined, size: 16, color: MyColors.secondaryText),
+                      ),
+                    ),
+                  if (!isUser) const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: text));
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Copied')),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Icon(
+                        Icons.copy,
+                        size: 16,
+                        color: isUser ? MyColors.lightText.withOpacity(0.8) : MyColors.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

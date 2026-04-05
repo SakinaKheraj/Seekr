@@ -19,6 +19,17 @@ from server.services.database_service import (
     count_today_messages,
 )
 
+from server.pydantic_models.collection_models import (
+    BookmarkRequest,
+    BookmarkResponse,
+    CollectionResponse
+)
+from server.services.collections_service import (
+    save_bookmark_sync,
+    get_collections_sync,
+    delete_bookmark_sync
+)
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title='SeekrAI')
@@ -120,3 +131,41 @@ async def stats(user=Depends(verify_firebase_token)):
             status_code=500,
             detail=str(e),
         )
+
+
+@app.post("/bookmarks", response_model=BookmarkResponse)
+async def create_bookmark(
+    body: BookmarkRequest,
+    user=Depends(verify_firebase_token)
+):
+    try:
+        bookmark_id = await run_in_threadpool(
+            save_bookmark_sync,
+            user["uid"],
+            body.folder_name,
+            body.query,
+            body.answer,
+            [s.model_dump() for s in body.sources]
+        )
+        return BookmarkResponse(bookmark_id=bookmark_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/collections", response_model=CollectionResponse)
+async def get_collections(user=Depends(verify_firebase_token)):
+    try:
+        folders = await run_in_threadpool(get_collections_sync, user["uid"])
+        return CollectionResponse(folders=folders)
+    except Exception as e:
+        print("COLLECTIONS ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/bookmarks/{bookmark_id}")
+async def delete_bookmark(bookmark_id: str, user=Depends(verify_firebase_token)):
+    try:
+        await run_in_threadpool(delete_bookmark_sync, user["uid"], bookmark_id)
+        return {"message": "Deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
