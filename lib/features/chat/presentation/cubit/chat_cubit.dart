@@ -10,7 +10,7 @@ class ChatCubit extends Cubit<ChatState>{
 
     //sends a message and updates the state
     Future<void> sendMessage(String text) async {
-      if(text.trim().isEmpty) return;
+      if(text.trim().isEmpty || state.isLoading) return;
 
       // add user message to state and clear previous follow-ups
       final updatedMessages = List<ChatMessage>.from(state.messages)

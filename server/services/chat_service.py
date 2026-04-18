@@ -17,7 +17,23 @@ async def chat_with_search(query: str, user_id: str):
     # Fetch recent history (backend-managed session)
     history = await get_session_history(user_id, limit=3)
 
-    search_results = await google_search(query)
+    # Optimization: Greetings detection to save Search & AI quota
+    greetings = {"hi", "hello", "hey", "how are you", "who are you", "good morning", "good evening", "thanks", "thank you"}
+    clean_query = query.lower().strip().strip("?!.")
+    
+    is_greeting = clean_query in greetings or len(clean_query.split()) < 2
+    
+    search_query = query
+    search_results = []
+    
+    if not is_greeting:
+        # Contextual Query Expansion
+        if history and len(query.split()) < 5:
+            last_topic = history[0]['query']
+            search_query = f"{query} regarding {last_topic}"
+
+        search_results = await google_search(search_query)
+
     # Optimization: One prompt for both answer and followups
     prompt = build_prompt(query, search_results, include_followups=True)
 

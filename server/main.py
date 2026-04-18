@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from server.services import firebase_config
 from server.services.firebase_auth_service import verify_firebase_token
-from server.pydantic_models.chat_body import ChatRequest, Source
+from server.pydantic_models.chat_body import ChatRequest, Source, DraftRequest
 from server.pydantic_models.chat_response import ChatResponse
 from server.services.search_service import google_search
 from server.pydantic_models.search_models import (
@@ -112,6 +112,30 @@ async def history(limit: int = 1000, user=Depends(verify_firebase_token)):
             detail=str(e),
         )
 
+@app.get("/history/{session_id}")
+async def history_details(session_id: str, user=Depends(verify_firebase_token)):
+    try:
+        from server.services.database_service import get_session_messages
+        messages = await get_session_messages(user["uid"], session_id)
+        return messages
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
+
+@app.delete("/history")
+async def clear_history(user=Depends(verify_firebase_token)):
+    try:
+        from server.services.database_service import clear_user_history
+        await clear_user_history(user["uid"])
+        return {"message": "History cleared successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
+
 
 @app.get("/stats")
 async def stats(user=Depends(verify_firebase_token)):
@@ -167,5 +191,17 @@ async def delete_bookmark(bookmark_id: str, user=Depends(verify_firebase_token))
     try:
         await run_in_threadpool(delete_bookmark_sync, user["uid"], bookmark_id)
         return {"message": "Deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/draft")
+async def create_draft(
+    body: DraftRequest,
+    user=Depends(verify_firebase_token)
+):
+    try:
+        from server.services.llm_service import generate_draft
+        draft = await run_in_threadpool(generate_draft, body.text, body.format)
+        return {"draft": draft}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

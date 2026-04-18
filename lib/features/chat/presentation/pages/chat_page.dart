@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:seekr/core/routes/app_routes.dart';
 import 'package:seekr/core/theme/colors.dart';
@@ -11,6 +12,9 @@ import 'package:seekr/features/chat/data/chat_service.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_cubit.dart';
 import 'package:seekr/features/chat/presentation/cubit/chat_state.dart';
 import 'package:seekr/features/collections/presentation/cubits/collections_cubit.dart';
+import 'package:seekr/features/drafting/data/drafting_service.dart';
+import 'package:seekr/features/drafting/presentation/cubit/drafting_cubit.dart';
+import 'package:seekr/features/drafting/presentation/cubit/drafting_state.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -460,6 +464,20 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
+  void _showDraftingSheet(BuildContext context) {
+    final draftingService = DraftingService(authRepo: context.read<AuthRepo>());
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BlocProvider(
+        create: (_) => DraftingCubit(draftingService: draftingService),
+        child: _DraftingView(text: text),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -486,14 +504,27 @@ class _ChatBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: isUser ? MyColors.lightText : MyColors.primaryText,
-                fontSize: 15,
-                height: 1.4,
-              ),
-            ),
+            isUser 
+              ? Text(
+                  text,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: MyColors.lightText,
+                    height: 1.4,
+                  ),
+                )
+              : MarkdownBody(
+                  data: text,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: GoogleFonts.poppins(
+                      color: MyColors.primaryText,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                    strong: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
             Align(
               alignment: Alignment.bottomRight,
               child: Row(
@@ -505,6 +536,15 @@ class _ChatBubble extends StatelessWidget {
                       child: const Padding(
                         padding: EdgeInsets.all(4.0),
                         child: Icon(Icons.bookmark_add_outlined, size: 16, color: MyColors.secondaryText),
+                      ),
+                    ),
+                  if (!isUser) const SizedBox(width: 8),
+                  if (!isUser)
+                    InkWell(
+                      onTap: () => _showDraftingSheet(context),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: Icon(Icons.drive_file_rename_outline, size: 16, color: MyColors.secondaryText),
                       ),
                     ),
                   if (!isUser) const SizedBox(width: 8),
@@ -530,6 +570,160 @@ class _ChatBubble extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Drafting View Widget ───────────────────────────────────────────────────────
+
+class _DraftingView extends StatelessWidget {
+  final String text;
+  const _DraftingView({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: MyColors.backgroundMid,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            Text(
+              'Drafting Lab',
+              style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: MyColors.primaryText),
+            ),
+            const SizedBox(height: 8),
+            const Text('Choose a format to transform this result', style: TextStyle(color: MyColors.secondaryText)),
+            const SizedBox(height: 24),
+
+            // Format chips
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _DraftOption(icon: Icons.email_outlined, label: 'Email', onSelect: () => context.read<DraftingCubit>().createDraft(text: text, format: 'email')),
+                _DraftOption(icon: Icons.article_outlined, label: 'Report', onSelect: () => context.read<DraftingCubit>().createDraft(text: text, format: 'markdown')),
+                _DraftOption(icon: Icons.share_outlined, label: 'Social', onSelect: () => context.read<DraftingCubit>().createDraft(text: text, format: 'linkedin')),
+                _DraftOption(icon: Icons.summarize_outlined, label: 'Summary', onSelect: () => context.read<DraftingCubit>().createDraft(text: text, format: 'summary')),
+              ],
+            ),
+            
+            const SizedBox(height: 32),
+
+            Expanded(
+              child: BlocBuilder<DraftingCubit, DraftingState>(
+                builder: (context, state) {
+                  if (state.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state.error != null) {
+                    return Center(child: Text(state.error!, style: const TextStyle(color: Colors.redAccent)));
+                  }
+                  if (state.draftResult == null) {
+                    return Center(
+                      child: Opacity(
+                        opacity: 0.3,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.auto_fix_high, size: 64, color: MyColors.secondaryText),
+                            const SizedBox(height: 16),
+                            Text('Waiting for selection...', style: GoogleFonts.poppins(color: MyColors.secondaryText)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white, 
+                            borderRadius: BorderRadius.circular(16), 
+                            border: Border.all(color: MyColors.gradient1.withOpacity(0.2))
+                          ),
+                          child: SingleChildScrollView(
+                            child: MarkdownBody(
+                              data: state.draftResult!,
+                              selectable: true,
+                              styleSheet: MarkdownStyleSheet(
+                                p: GoogleFonts.poppins(color: MyColors.primaryText, fontSize: 13, height: 1.5),
+                                strong: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: MyColors.gradient3, fontSize: 14),
+                                listBullet: const TextStyle(color: MyColors.gradient2, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MyColors.gradient1,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: state.draftResult!));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Draft copied')));
+                        },
+                        icon: const Icon(Icons.content_copy, color: Colors.white),
+                        label: const Text(
+                          'Copy Draft',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DraftOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onSelect;
+
+  const _DraftOption({required this.icon, required this.label, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: MyColors.gradient1.withOpacity(0.4)), // Themed blue border
+            ),
+            child: Icon(icon, color: MyColors.gradient2, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, color: MyColors.secondaryText)),
+        ],
       ),
     );
   }

@@ -7,3 +7,7 @@ class ChatRequest(BaseModel):
 class Source(BaseModel):
     title: str
     link: str
+
+class DraftRequest(BaseModel):
+    text: str
+    format: str # e.g., 'email', 'linkedin', 'markdown', 'summary'

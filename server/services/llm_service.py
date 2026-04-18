@@ -7,7 +7,10 @@ genai.configure(api_key=GEMINI_API_KEY)
 MODELS_TO_TRY = [
     'gemini-2.5-flash',  
     'gemini-2.0-flash',   
-    'gemini-1.5-flash',   
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash-8b',
+    'gemini-1.0-pro'
 ]
 
 
@@ -54,7 +57,9 @@ def generate_ai_response(prompt: str) -> str:
             continue
 
     error_summary = "\n".join(last_error_info)
-    raise Exception(f"All AI models failed.\n{error_summary}")
+    if "429" in error_summary or "quota" in error_summary.lower():
+        raise Exception("API Quota Exceeded 🛑\nYou have reached the Gemini free tier limit. Please wait a minute and try again.")
+    raise Exception(f"AI models failed to respond. Please try again.")
 
 
 def build_prompt(query: str, search_results: list, include_followups: bool = False) -> str:
@@ -69,16 +74,19 @@ URL: {r['link']}
 """
 
     prompt = f"""
-You are a helpful AI assistant.
-Answer the question ONLY using the sources below.
-If the answer is not present, say "I don't know".
+You are Seekr, a helpful AI assistant. 
+Answer the question using the sources provided below as your primary reference.
+
+Guidelines:
+1. If the sources are relevant, use them to provide a detailed and accurate answer.
+2. If the sources are irrelevant or don't fully answer the user's question (especially for follow-up questions like "give an example"), use the provided 'Previous chats' history and your own general knowledge to give a proper response.
+3. Be concise, friendly, and helpful. 
+4. Do NOT mention source numbers or say "Source 1 says...". Just provide the information naturally.
 
 Question: {query}
 
 Sources:
 {context}
-
-Answer in simple, friendly language. Do NOT mention or cite source numbers.
 """
     if include_followups:
         prompt += """
@@ -152,7 +160,9 @@ def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
             continue
 
     error_summary = "\n".join(last_error_info)
-    raise Exception(f"All AI models failed.\n{error_summary}")
+    if "429" in error_summary or "quota" in error_summary.lower():
+        raise Exception("API Quota Exceeded 🛑\nYou have reached the Gemini free tier limit. Please wait a minute and try again.")
+    raise Exception(f"AI models failed to respond. Please try again.")
 
 
 def generate_session_title(first_query: str) -> str:
@@ -192,3 +202,15 @@ def generate_followups(query: str, answer: str) -> List[str]:
         except Exception:
             continue
     return []
+
+def generate_draft(text: str, format: str) -> str:
+    """Transform search results into specific professional formats."""
+    templates = {
+        "email": f"Draft a professional email based on this information. Include a clear subject line and a structured body with a greeting and sign-off. Information: {text}",
+        "linkedin": f"Draft a highly engaging LinkedIn post based on this information. Use a scroll-stopping hook, emojis, and relevant hashtags. Information: {text}",
+        "markdown": f"Format this information into a high-quality Markdown report. Use headers, bullet points, and clean structure. Information: {text}",
+        "summary": f"Provide a brief, executive summary of this information in 3-5 high-impact bullet points. Information: {text}"
+    }
+    
+    prompt = templates.get(format, templates["summary"])
+    return generate_ai_response(prompt)

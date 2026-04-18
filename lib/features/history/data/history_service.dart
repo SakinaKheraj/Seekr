@@ -128,4 +128,48 @@ class HistoryService {
         );
     }
   }
+
+  /// Deletes all history for the current user
+  Future<void> clearHistory() async {
+    try {
+      final token = await _authRepo.getIdToken();
+      if (token == null) throw HistoryException('User not authenticated', 'unauthorized');
+
+      await _dio.delete(
+        '${ApiConfig.baseUrl}/history',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw HistoryException('Failed to clear history', 'unknown-error');
+    }
+  }
+
+  /// Fetches all messages for a specific session
+  Future<List<Map<String, dynamic>>> getSessionDetails(String sessionId) async {
+    try {
+      final token = await _authRepo.getIdToken();
+      if (token == null) throw HistoryException('User not authenticated', 'unauthorized');
+
+      final response = await _dio.get(
+        '${ApiConfig.baseUrl}/history/$sessionId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      final data = response.data;
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+      return [];
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw HistoryException('Failed to fetch session details', 'unknown-error');
+    }
+  }
 }

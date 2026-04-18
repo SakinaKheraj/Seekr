@@ -16,6 +16,7 @@ class HistoryCubit extends Cubit<HistoryState> {
 
       final sessions = historyItems.map((item) {
         return HistorySession(
+          sessionId: item['session_id'] as String? ?? '',
           title: item['last_message'] as String? ?? 'Session',
           messageCount: item['message_count'] as int? ?? 0,
           sourceCount: item['source_count'] as int? ?? 0,
@@ -37,6 +38,34 @@ class HistoryCubit extends Cubit<HistoryState> {
           error: e.toString(),
         ),
     );
+    }
+  }
+
+  Future<void> loadSessionDetails(String sessionId) async {
+    // If we already have the details, don't fetch again
+    if (state.sessionDetails.containsKey(sessionId)) return;
+
+    // Load details
+    try {
+      final messages = await _historyService.getSessionDetails(sessionId);
+      
+      final updatedDetails = Map<String, List<Map<String, dynamic>>>.from(state.sessionDetails);
+      updatedDetails[sessionId] = messages;
+
+      emit(state.copyWith(sessionDetails: updatedDetails));
+    } catch (e) {
+      // For details, we might just toast an error or show it in the expanded area
+      emit(state.copyWith(error: 'Could not load chat details'));
+    }
+  }
+
+  Future<void> clearHistory() async {
+    emit(state.copyWith(isLoading: true, error: null));
+    try {
+      await _historyService.clearHistory();
+      emit(state.copyWith(sessions: const [], isLoading: false, error: null));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 }

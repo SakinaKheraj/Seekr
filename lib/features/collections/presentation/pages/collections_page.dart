@@ -110,35 +110,54 @@ class _CollectionsView extends StatelessWidget {
         child: SafeArea(
           child: BlocBuilder<CollectionsCubit, CollectionsState>(
             builder: (context, state) {
-              if (state.isLoading) {
+              if (state.isLoading && state.folders.isEmpty) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (state.error != null) {
+              if (state.error != null && state.folders.isEmpty) {
                 return Center(
-                  child: Text(
-                    'Error: ${state.error}',
-                    style: const TextStyle(color: Colors.red),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text(
+                          state.error!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(color: MyColors.secondaryText),
+                        ),
+                        TextButton(
+                          onPressed: () => context.read<CollectionsCubit>().loadCollections(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
 
               if (state.folders.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                return RefreshIndicator(
+                  onRefresh: () => context.read<CollectionsCubit>().loadCollections(),
+                  child: ListView(
                     children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.3),
                       const Icon(
-                        Icons.bookmark_border,
-                        size: 64,
-                        color: Color.fromARGB(255, 16, 44, 137),
+                        Icons.collections_bookmark_outlined,
+                        size: 80,
+                        color: MyColors.secondaryText,
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        'No collections yet',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Color.fromARGB(255, 16, 44, 137),
+                      Center(
+                        child: Text(
+                          'No collections yet',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            color: MyColors.secondaryText,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -146,7 +165,9 @@ class _CollectionsView extends StatelessWidget {
                 );
               }
 
-              return ListView.builder(
+              return RefreshIndicator(
+                onRefresh: () => context.read<CollectionsCubit>().loadCollections(),
+                child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
                 itemCount: state.folders.keys.length,
                 itemBuilder: (context, index) {
@@ -509,11 +530,12 @@ class _CollectionsView extends StatelessWidget {
                     ),
                   );
                 },
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
