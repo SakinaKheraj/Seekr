@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekr/core/theme/colors.dart';
 
 class MyTextfield extends StatelessWidget {
   final TextEditingController controller;
@@ -18,18 +19,26 @@ class MyTextfield extends StatelessWidget {
       obscureText: obscureText,
       decoration: InputDecoration(
         //unselected
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(
-            color: Colors.grey.shade700,
+            color: Colors.grey.shade300,
+          ),
+        ),
+        
+        //unselected default
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Colors.grey.shade300,
           ),
         ),
 
         //selected
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: const Color.fromARGB(255, 12, 14, 121),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: MyColors.gradient2,
             width: 2.0,
           ),
         ),
@@ -37,6 +46,8 @@ class MyTextfield extends StatelessWidget {
         hintStyle: TextStyle(
           color: Colors.grey.shade500,
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
     );
   }

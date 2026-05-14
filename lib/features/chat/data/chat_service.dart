@@ -19,7 +19,14 @@ class ChatService {
   ChatService({
     Dio? dio,
     required AuthRepo authRepo,
-  }) : _dio = dio ?? Dio(),
+  })  : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 60),
+              ),
+            ),
         _authRepo = authRepo;
 
   // sends a chat query to the backend and returns the answer + follow-up suggestions + sources
@@ -33,7 +40,7 @@ class ChatService {
     
     // call chat endpoint
     final response = await _dio.post(
-      '${ApiConfig.baseUrl}/chat',
+      '/chat',
       data: {
         'query': query,
       },
@@ -48,15 +55,15 @@ class ChatService {
     );
 
     final data = response.data as Map<String, dynamic>;
-    final answer = data['answer'] as String? ?? 'No response from AI';
+    final answer = (data['answer'] ?? 'No response from AI').toString();
     final rawFollowups = data['followups'];
     final followups = (rawFollowups is List)
-        ? rawFollowups.whereType<String>().where((q) => q.isNotEmpty).toList()
+        ? rawFollowups.map((q) => q.toString()).where((q) => q.isNotEmpty).toList()
         : <String>[];
         
     final rawSources = data['sources'];
     final sources = (rawSources is List) 
-        ? rawSources.cast<Map<String, dynamic>>() 
+        ? rawSources.map((s) => Map<String, dynamic>.from(s as Map)).toList() 
         : <Map<String, dynamic>>[];
 
     return (answer: answer, followups: followups, sources: sources);

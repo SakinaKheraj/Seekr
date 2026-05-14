@@ -20,7 +20,14 @@ class ProfileService {
   ProfileService({
     Dio? dio,
     required AuthRepo authRepo,
-  })  : _dio = dio ?? Dio(),
+  })  : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 30),
+              ),
+            ),
         _authRepo = authRepo;
 
   /// Fetches user profile stats from backend
@@ -38,7 +45,7 @@ class ProfileService {
 
       //  Call FastAPI /stats endpoint
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/stats',
+        '/stats',
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',

@@ -11,10 +11,30 @@ from server.services.database_service import (
     get_session_history
 )
 from server.pydantic_models.chat_body import Source
+from server.services.cache_service import ai_cache
 
 
 async def chat_with_search(query: str, user_id: str):
-    # Fetch recent history (backend-managed session)
+    # 0. Check the lightweight Memory Cache first!
+    cached_data = ai_cache.get_cached_response(query)
+    if cached_data:
+        print(f" 🚀 [CACHE HIT] Delivered response for '{query[:20]}...' instantly. Saved 1 API Call!")
+        # We still save it to the DB so user sees it in History
+        asyncio.create_task(
+            save_chat_message(
+                user_id=user_id,
+                query=query,
+                answer=cached_data["answer"],
+                sources=cached_data["sources"],
+            )
+        )
+        sources = [
+            Source(title=r["title"], link=r["link"])
+            for r in cached_data["sources"]
+        ]
+        return cached_data["answer"], sources, cached_data["followups"]
+
+    # 1. Fetch recent history (backend-managed session)
     history = await get_session_history(user_id, limit=3)
 
     # Optimization: Greetings detection to save Search & AI quota
@@ -49,6 +69,9 @@ async def chat_with_search(query: str, user_id: str):
 
     # Combined generation: Answer + 3 Followups
     answer, followups = await run_in_threadpool(generate_answer_and_followups, prompt)
+
+    # Save to global RAM cache to prevent duplicate processing in the future
+    ai_cache.save_response(query, answer, search_results[:3], followups)
 
     # Save to database (fire and forget task for saving, while we return results)
     asyncio.create_task(

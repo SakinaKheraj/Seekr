@@ -85,8 +85,16 @@ class _ForgetPassState extends State<ForgetPass> {
                   final msg = await authCubit.forgotPassword(email);
 
                   if (!mounted) return;
+
+                  final isError = msg.startsWith("ERROR:");
+
                   messenger.showSnackBar(
-                    SnackBar(content: Text(msg)),
+                    SnackBar(
+                      content: Text(msg
+                          .replaceFirst(isError ? "ERROR:" : "SUCCESS:", "")
+                          .trim()),
+                      backgroundColor: isError ? Colors.red : Colors.green,
+                    ),
                   );
                 },
               ),

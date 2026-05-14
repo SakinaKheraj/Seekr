@@ -1,16 +1,23 @@
 import google.generativeai as genai
+import time
 from server.config import GEMINI_API_KEY
 from typing import List
 
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Free-tier quota order (highest daily quota first):
+# gemini-2.0-flash:   1500 RPD, 15 RPM  ← best free tier option
+# gemini-2.5-flash:   250 RPD,  10 RPM
+# gemini-1.5-flash:   1500 RPD, 15 RPM  ← second best
+# gemini-1.5-flash-8b: 1500 RPD, 15 RPM
+# gemini-1.0-pro:     --- (limited)
+# gemini-1.5-pro is EXCLUDED: only 50 RPD free — not worth the fallback slot
 MODELS_TO_TRY = [
-    'gemini-2.5-flash',  
-    'gemini-2.0-flash',   
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-1.5-flash-8b',
-    'gemini-1.0-pro'
+    'gemini-2.0-flash',    # Best free tier: 1500 RPD, 15 RPM
+    'gemini-2.5-flash',    # 250 RPD, 10 RPM — premium quality fallback
+    'gemini-1.5-flash',    # 1500 RPD, 15 RPM — solid backup
+    'gemini-1.5-flash-8b', # 1500 RPD, 15 RPM — lightweight backup
+    'gemini-1.0-pro'       # Last resort
 ]
 
 
@@ -90,11 +97,16 @@ Sources:
 """
     if include_followups:
         prompt += """
-After your answer, add exactly one line: FOLLOWUP_SECTION
-Then, suggest exactly 3 short follow-up questions that the user might want to ask next.
-- Each question must be on a new line.
-- No numbering, no bullet points, no extra text.
-- Each question must be under 10 words.
+IMPORTANT: You MUST respond ONLY with a raw, valid JSON object matching the exact schema below! Do not add any markdown formatting, code blocks, or conversational text.
+
+{
+  "answer": "Your detailed answer here based on the sources...",
+  "followups": [
+    "Short related question 1?",
+    "Short related question 2?",
+    "Short related question 3?"
+  ]
+}
 """
     return prompt
 
@@ -127,25 +139,29 @@ def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
                 if not full_text:
                     continue
 
-                answer = full_text
-                followups = []
-                
-                if "FOLLOWUP_SECTION" in full_text:
-                    parts = full_text.split("FOLLOWUP_SECTION")
-                    answer = parts[0].strip()
-                    if len(parts) > 1:
-                        followups = [
-                            f.strip().lstrip("-").lstrip("*").strip()
-                            for f in parts[1].strip().splitlines()
-                            if f.strip()
-                        ][:3]
+                import json
+                try:
+                    # Strip out Markdown JSON block wrappers if the model ignores the instruction
+                    clean_json = full_text.strip()
+                    if clean_json.startswith("```json"):
+                        clean_json = clean_json.split("```json")[-1].split("```")[0].strip()
+                    elif clean_json.startswith("```"):
+                        clean_json = clean_json.split("```")[-1].split("```")[0].strip()
 
-                # pad with empty strings up to 3
+                    payload = json.loads(clean_json)
+                    answer = payload.get("answer", "").strip()
+                    followups = payload.get("followups", [])
+                except json.JSONDecodeError as e:
+                    # Fallback if AI entirely fails to produce valid JSON
+                    answer = full_text
+                    followups = []
+
+                # pad with empty strings up to 3 to satisfy UI expectations if AI provides fewer
                 while followups and len(followups) < 3:
                     followups.append("")
 
-                print(f" SUCCESS with {model_name}")
-                return answer, followups
+                print(f" SUCCESS with {model_name} (JSON BATCH PAYLOAD)")
+                return answer, followups[:3]
 
             except Exception as e:
                 msg = f"{model_name}: text extraction failed: {str(e)}"
@@ -175,33 +191,6 @@ def generate_session_title(first_query: str) -> str:
     # capitalize first letter
     return title[:1].upper() + title[1:] if title else "New Session"
 
-
-def generate_followups(query: str, answer: str) -> List[str]:
-    """Return 3 concise follow-up questions the user might want to ask next."""
-    prompt = (
-        f"The user just asked: {query}\n"
-        f"The AI answered: {answer[:400]}\n\n"
-        f"Suggest exactly 3 short follow-up questions (one per line, no numbering, "
-        f"no bullet points, no extra text). Each question must be under 10 words."
-    )
-    for model_name in MODELS_TO_TRY:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            if response and response.text:
-                lines = [
-                    l.strip().lstrip("-").lstrip("*").strip()
-                    for l in response.text.strip().splitlines()
-                    if l.strip()
-                ]
-                # return exactly 3, pad with empty strings if needed
-                questions = [q for q in lines if q][:3]
-                while len(questions) < 3:
-                    questions.append("")
-                return questions
-        except Exception:
-            continue
-    return []
 
 def generate_draft(text: str, format: str) -> str:
     """Transform search results into specific professional formats."""

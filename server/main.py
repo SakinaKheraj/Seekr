@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 # import os
 from fastapi import FastAPI, Depends, HTTPException
 from server.services import firebase_config
@@ -12,6 +15,7 @@ from server.services.llm_service import generate_ai_response, build_prompt
 from server.pydantic_models.llm_models import LLMRequest, LLMResponse
 from fastapi.concurrency import run_in_threadpool
 from server.services.chat_service import chat_with_search
+from server.services.cache_service import ai_cache
 from server.services.database_service import (
     save_chat_message,
     get_user_sessions,
@@ -36,10 +40,10 @@ app = FastAPI(title='SeekrAI')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],   # Mobile app — all origins OK for free tier
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 firebase_config.initialize_firebase()
 
@@ -74,7 +78,7 @@ async def chat(
         )
 
     except Exception as e:
-        print("CHAT ERROR:", e)  # TEMP DEBUG
+        logger.error(f"CHAT ERROR for user {user['uid'][:8]}...: {e}")
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -200,8 +204,20 @@ async def create_draft(
     user=Depends(verify_firebase_token)
 ):
     try:
+        # 1. Zero-quota Memory Caching protection
+        cache_key = f"DRAFT:{body.format}:{body.text}"
+        cached = ai_cache.get_cached_response(cache_key)
+        
+        if cached:
+            print(f" 🚀 [CACHE HIT] Delivered '{body.format}' draft instantly! Saved 1 API Call!")
+            return {"draft": cached["answer"]}
+
         from server.services.llm_service import generate_draft
         draft = await run_in_threadpool(generate_draft, body.text, body.format)
+        
+        # Save to RAM so repeated clicking doesn't hit Gemini
+        ai_cache.save_response(cache_key, draft, [], [])
+        
         return {"draft": draft}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

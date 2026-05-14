@@ -16,11 +16,11 @@ class HistoryCubit extends Cubit<HistoryState> {
 
       final sessions = historyItems.map((item) {
         return HistorySession(
-          sessionId: item['session_id'] as String? ?? '',
-          title: item['last_message'] as String? ?? 'Session',
-          messageCount: item['message_count'] as int? ?? 0,
-          sourceCount: item['source_count'] as int? ?? 0,
-          time: item['timestamp'] as String? ?? '',
+          sessionId: (item['session_id'] ?? '').toString(),
+          title: (item['last_message'] ?? 'Session').toString(),
+          messageCount: (item['message_count'] as num?)?.toInt() ?? 0,
+          sourceCount: (item['source_count'] as num?)?.toInt() ?? 0,
+          time: (item['timestamp'] ?? '').toString(),
         );
       }).toList();
 

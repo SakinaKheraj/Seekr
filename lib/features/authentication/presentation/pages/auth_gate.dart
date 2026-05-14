@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/features/authentication/presentation/pages/auth_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:seekr/features/authentication/presentation/cubits/auth_cubit.dart';
@@ -16,14 +17,14 @@ class AuthGate extends StatelessWidget {
           return const ChatPage();
         }
 
-        if (state is Unauthenticated) {
+        if (state is Unauthenticated || state is AuthLoading || state is AuthError) {
           return const AuthPage();
         }
 
-        // AuthInitial / AuthLoading / AuthError fall back to a simple loading screen.
         return const Scaffold(
+          backgroundColor: MyColors.backgroundStart,
           body: Center(
-            child: CircularProgressIndicator(),
+            child: CircularProgressIndicator(color: MyColors.gradient2),
           ),
         );
       },

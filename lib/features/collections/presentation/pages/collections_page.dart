@@ -28,16 +28,16 @@ class _CollectionsView extends StatelessWidget {
     if (bookmarks.isEmpty) return;
 
     final StringBuffer sb = StringBuffer();
-    sb.writeln('📂 *${folderName.toUpperCase()} - Seekr Collection*');
+    sb.writeln(' *${folderName.toUpperCase()} - Seekr Collection*');
     sb.writeln('Shared via Seekr AI\n');
 
     for (var i = 0; i < bookmarks.length; i++) {
       final b = bookmarks[i];
-      sb.writeln('📍 *${i + 1}. ${b.query}*');
+      sb.writeln(' *${i + 1}. ${b.query}*');
       sb.writeln('${b.answer}\n');
       
       if (b.sources.isNotEmpty) {
-        sb.writeln('🔗 *Sources:*');
+        sb.writeln(' *Sources:*');
         for (var s in b.sources) {
           sb.writeln('• ${s.title}: ${s.link}');
         }

@@ -399,6 +399,7 @@ class _ChatBubble extends StatelessWidget {
     final folderController = TextEditingController(text: 'Favorites');
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Allow it to resize with keyboard
       backgroundColor: MyColors.backgroundMid,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -406,59 +407,73 @@ class _ChatBubble extends StatelessWidget {
       builder: (bContext) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(bContext).viewInsets.bottom,
-          left: 20, right: 20, top: 20,
+          left: 20,
+          right: 20,
+          top: 20,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Save Bookmark',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: MyColors.primaryText,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: folderController,
-              style: const TextStyle(color: MyColors.primaryText),
-              decoration: InputDecoration(
-                labelText: 'Folder Name',
-                labelStyle: const TextStyle(color: MyColors.secondaryText),
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: MyColors.glassBorder)),
-                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: MyColors.gradient2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MyColors.gradient1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Save Bookmark',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: MyColors.primaryText,
                 ),
-                onPressed: () {
-                  final folder = folderController.text.trim();
-                  if (folder.isNotEmpty) {
-                    context.read<CollectionsCubit>().saveBookmark(
-                      folderName: folder,
-                      query: originalQuery,
-                      answer: text,
-                      sources: sources,
-                    );
-                    Navigator.pop(bContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Saved to $folder')),
-                    );
-                  }
-                },
-                child: const Text('Save'),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: folderController,
+                style: const TextStyle(color: MyColors.primaryText),
+                decoration: InputDecoration(
+                  labelText: 'Folder Name',
+                  labelStyle: const TextStyle(color: MyColors.secondaryText),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: MyColors.secondaryText.withOpacity(0.5), // Darker border
+                    ),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: MyColors.gradient2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MyColors.gradient1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    final folder = folderController.text.trim();
+                    if (folder.isNotEmpty) {
+                      context.read<CollectionsCubit>().saveBookmark(
+                        folderName: folder,
+                        query: originalQuery,
+                        answer: text,
+                        sources: sources,
+                      );
+                      Navigator.pop(bContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Saved to $folder')),
+                      );
+                    }
+                  },
+                  child: const Text('Save',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -590,14 +605,17 @@ class _DraftingView extends StatelessWidget {
       expand: false,
       builder: (context, scrollController) => Container(
         decoration: const BoxDecoration(
-          color: MyColors.backgroundMid,
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(color: MyColors.shadowLight, blurRadius: 40, offset: Offset(0, -10)),
+          ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 24),
             Text(
               'Drafting Lab',
@@ -653,7 +671,9 @@ class _DraftingView extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white, 
                             borderRadius: BorderRadius.circular(16), 
-                            border: Border.all(color: MyColors.gradient1.withOpacity(0.2))
+                            boxShadow: const [
+                              BoxShadow(color: MyColors.shadowLight, blurRadius: 15, offset: Offset(0, 5)),
+                            ],
                           ),
                           child: SingleChildScrollView(
                             child: MarkdownBody(

@@ -20,7 +20,14 @@ class HistoryService {
   HistoryService({
     Dio? dio,
     required AuthRepo authRepo,
-  })  : _dio = dio ?? Dio(),
+  })  : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 30),
+              ),
+            ),
         _authRepo = authRepo;
 
   /// Fetches chat history / sessions from backend
@@ -38,7 +45,7 @@ class HistoryService {
 
       // 🌐 Call FastAPI /history endpoint
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/history',
+        '/history',
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -136,7 +143,7 @@ class HistoryService {
       if (token == null) throw HistoryException('User not authenticated', 'unauthorized');
 
       await _dio.delete(
-        '${ApiConfig.baseUrl}/history',
+        '/history',
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),
@@ -155,7 +162,7 @@ class HistoryService {
       if (token == null) throw HistoryException('User not authenticated', 'unauthorized');
 
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/history/$sessionId',
+        '/history/$sessionId',
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
         ),

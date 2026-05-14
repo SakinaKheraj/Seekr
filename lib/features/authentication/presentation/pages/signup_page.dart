@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,21 +58,54 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 20, left: 25, right: 25),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Sign Up',
-                style: GoogleFonts.poppins(
-                  fontSize: 35,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 50),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              MyColors.backgroundStart,
+              MyColors.backgroundMid,
+              MyColors.backgroundEnd,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [
+                      BoxShadow(color: MyColors.shadowLight, blurRadius: 40, offset: Offset(0, 15)),
+                    ],
+                  ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.auto_awesome, size: 48, color: MyColors.gradient2),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Join Seekr',
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: MyColors.gradient3,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Create an account to start exploring.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: MyColors.secondaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 40),
 
               // Email textfield
               Align(
@@ -152,10 +186,7 @@ class _SignupPageState extends State<SignupPage> {
                     children: [
                       TextSpan(
                         text: 'Sign In',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: MyColors.gradient2,
                               fontWeight: FontWeight.bold,
                             ),
@@ -167,6 +198,10 @@ class _SignupPageState extends State<SignupPage> {
             ],
           ),
         ),
+      ),
+    ),
+  ),
+),
       ),
     );
   }

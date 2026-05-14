@@ -63,7 +63,7 @@ def get_collections_sync(user_id: str) -> Dict[str, List[Dict[str, Any]]]:
             sources = []
         
         item = {
-            "id": doc.id,
+            "id": data["id"],
             "query": str(data.get("query", "")),
             "answer": str(data.get("answer", "")),
             "sources": sources,

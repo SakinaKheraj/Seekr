@@ -181,11 +181,10 @@ class _HistoryCardState extends State<_HistoryCard> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85), // Clean white glass instead of gray
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white), 
         boxShadow: const [
-          BoxShadow(color: MyColors.shadowLight, blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(color: MyColors.shadowLight, blurRadius: 15, offset: Offset(0, 5)),
         ],
       ),
       clipBehavior: Clip.antiAlias,

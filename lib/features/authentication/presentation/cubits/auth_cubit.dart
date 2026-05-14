@@ -31,13 +31,18 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         _currentUser = user;
 
-        //  GET TOKEN ONLY HERE
-        _idToken = await authRepo.getIdToken();
-        if (kDebugMode) {
-          debugPrint('FIREBASE ID TOKEN: $_idToken');
+        try {
+          // Firebase might throw connection errors when fetching the token
+          _idToken = await authRepo.getIdToken();
+          if (kDebugMode) {
+            debugPrint('FIREBASE ID TOKEN: $_idToken');
+          }
+          emit(Authenticated(user: user));
+        } catch (e) {
+          _currentUser = null;
+          _idToken = null;
+          emit(AuthError(message: 'Failed to complete secure login: ${e.toString()}'));
         }
-
-        emit(Authenticated(user: user));
       }
     });
   }
@@ -73,9 +78,10 @@ class AuthCubit extends Cubit<AuthState> {
   /// FORGOT PASSWORD
   Future<String> forgotPassword(String email) async {
     try {
-      return await authRepo.sendPasswordResetEmail(email);
+      await authRepo.sendPasswordResetEmail(email);
+      return "SUCCESS: Password reset email sent! Check your inbox.";
     } catch (e) {
-      return e.toString();
+      return "ERROR: ${e.toString().replaceAll('Exception:', '').trim()}";
     }
   }
 

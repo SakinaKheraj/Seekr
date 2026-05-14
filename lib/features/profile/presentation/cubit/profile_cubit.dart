@@ -24,14 +24,14 @@ class ProfileCubit extends Cubit<ProfileState> {
 
       emit(
         state.copyWith(
-          name: data['name'] as String? ?? '',
-          email: data['email'] as String? ?? '',
-          totalSessions: data['total_sessions'] as int? ?? 0,
-          usedSessions: data['used_sessions'] as int? ?? 0,
+          name: (data['name'] ?? '').toString(),
+          email: (data['email'] ?? '').toString(),
+          totalSessions: (data['total_sessions'] as num?)?.toInt() ?? 0,
+          usedSessions: (data['used_sessions'] as num?)?.toInt() ?? 0,
           isLoading: false,
           error: null,
-      ),
-    );
+        ),
+      );
     } catch (e) {
       emit(
         state.copyWith(
