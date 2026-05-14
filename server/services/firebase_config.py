@@ -1,13 +1,21 @@
+import json
+import os
 import firebase_admin
 from firebase_admin import credentials
-from server.config import FIREBASE_CREDENTIALS
 
 def initialize_firebase():
     if not firebase_admin._apps:
-        cred = credentials.Certificate(FIREBASE_CREDENTIALS)
+        # Try JSON string first (for Render)
+        cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+        if cred_json:
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            # Fall back to file path (for local/EC2)
+            from server.config import FIREBASE_CREDENTIALS
+            cred = credentials.Certificate(FIREBASE_CREDENTIALS)
+        
         firebase_admin.initialize_app(
             cred,
-            {
-                "projectId": "seekr-8b019"
-            }
+            {"projectId": "seekr-8b019"}
         )
