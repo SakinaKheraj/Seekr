@@ -40,10 +40,10 @@ app = FastAPI(title='SeekrAI')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Mobile app — all origins OK for free tier
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 firebase_config.initialize_firebase()
 
@@ -221,3 +221,4 @@ async def create_draft(
         return {"draft": draft}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
