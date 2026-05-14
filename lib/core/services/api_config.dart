@@ -5,8 +5,8 @@ class ApiConfig {
   // ─────────────────────────────────────────────────────────────────────
   // PRODUCTION: Set useProduction = true and put your EC2 IP/domain here
   // ─────────────────────────────────────────────────────────────────────
-  static const bool useProduction = false;
-  static const String prodUrl = 'http://YOUR_EC2_PUBLIC_IP';
+  static const bool useProduction = true;
+  static const String prodUrl = 'http://16.170.196.76';
 
   // ─────────────────────────────────────────────────────────────────────
   // LOCAL DEV on a REAL PHYSICAL DEVICE (USB debugging):
