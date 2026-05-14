@@ -9,6 +9,9 @@ def initialize_firebase():
         cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
         if cred_json:
             cred_dict = json.loads(cred_json)
+            # Ensure private_key handles escaped newlines correctly
+            if "private_key" in cred_dict:
+                cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
             cred = credentials.Certificate(cred_dict)
         else:
             # Fall back to file path (for local/EC2)

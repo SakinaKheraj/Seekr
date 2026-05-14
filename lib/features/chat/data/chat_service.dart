@@ -23,8 +23,8 @@ class ChatService {
             Dio(
               BaseOptions(
                 baseUrl: ApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 60),
+                connectTimeout: const Duration(seconds: 60),
+                receiveTimeout: const Duration(seconds: 90),
               ),
             ),
         _authRepo = authRepo;
