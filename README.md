@@ -1,101 +1,312 @@
-# Seekr - Advanced AI Search & Drafting Assistant
+<div align="center">
 
-![Seekr Architecture](https://img.shields.io/badge/Architecture-Clean-brightgreen) ![Flutter UI](https://img.shields.io/badge/UI-Glassmorphism-blue) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-teal) ![Firebase](https://img.shields.io/badge/Database-Firestore-orange)
+<img src="assets/images/app_icon.png" alt="Seekr Logo" width="120" height="120" style="border-radius: 28px"/>
 
-**Seekr** is a premium, AI-powered search and drafting assistant. It leverages Google Gemini's reasoning capabilities paired with live Google Search to give you highly accurate, context-aware answers complete with source citations, smart follow-up suggestions, and professional drafting tools.
+# SEEKR
 
-Built with a relentless focus on performance, Seekr dynamically mitigates high API costs through an intelligent `$0-Cost` RAM caching layer that stores recurring search workflows and document conversions.
+### The AI-Native Discovery & Drafting Ecosystem
+
+*Real-time intelligence. Zero stale answers. Premium by design.*
+
+<br/>
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.10+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/gemini)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FF6F00?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com)
+[![Docker](https://img.shields.io/badge/Docker-AWS_EC2-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
+
+<br/>
+
+[Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Deployment](#-deployment) · [Contributing](#-contributing)
+
+<br/>
+
+</div>
 
 ---
 
-## ✨ Key Features
-- 🔍 **Live Search Intelligence**: Automatically runs Google custom searches and passes context to Gemini AI to ensure answers are highly factual and up-to-date.
-- ⚡ **Zero-Latency RAM Caching**: Intercepts repetitive AI questions and drafting commands to serve them instantly from a local dictionary, saving severe backend quota costs.
-- ✏️ **Drafting Lab**: One-click transform any AI answer into a polished Executive Summary, Email, LinkedIn Post, or Markdown Report format.
-- 📂 **Collections & Bookmarks**: Save useful answers in dynamically generated Folders for later use. Share entire collections easily with one click.
-- 🕒 **Session History**: Easily scroll through past searches locally and securely via the cloud structure.
-- 💎 **Premium Interface**: A world-class interface built identically to iOS system components with fluid animations, solid Apple-style white elevation blocks, and BLoC Stream updates. 
+## The Problem with AI Today
+
+Every major AI assistant has the same flaw: **they're frozen in time.** Ask about last week's news, a recent product launch, or current market data — and you get a confident, outdated answer.
+
+**Seekr fixes this.**
+
+By fusing Google Search's real-time web intelligence with Gemini's advanced reasoning, Seekr delivers answers that are both *deeply intelligent* and *factually current* — every single time.
+
+---
+
+## ✨ Features
+
+### 🔍 Live Intelligence Engine
+Every query is grounded in real-time web data. Seekr fetches the top 5 most relevant sources from Google Search, then passes them — along with your full chat history — to Gemini for synthesis. The result is an answer that's cited, current, and contextually aware.
+
+- Smart **greeting detection** prevents wasting quota on `"Hi"` or `"Hello"`
+- Automatic **3 follow-up suggestions** generated in the same API call (zero extra cost)
+- Full **source citation** included with every response
+
+### ⚡ $0-Cost RAM Caching
+Seekr's MemoryCache Singleton intercepts repeated queries before they ever hit the API. Identical questions — whether in Search or the Drafting Lab — are served from RAM in **0ms at $0 cost**.
+
+> This is the architecture that keeps Seekr scalable without scaling your bill.
+
+### 🧪 The Drafting Lab
+Transform any AI-generated answer into polished, ready-to-use professional content in one tap.
+
+| Format | Use Case |
+|---|---|
+| 📧 **Professional Email** | Context-aware outreach, follow-ups, responses |
+| 💼 **LinkedIn Post** | Engagement-optimized thought leadership content |
+| 📋 **Executive Summary** | Concise, decision-ready briefings |
+| 📄 **Markdown Report** | Structured technical documentation |
+
+### 📁 Smart Collections
+Save any response into named, organized folders. Collections are secured at the backend — ownership is enforced per `uid`, so users can only access and delete their own bookmarks. Fully synced to Firebase Firestore across all devices.
+
+### 🕒 Session-Based History
+Seekr doesn't just log messages — it manages **contextual journeys**.
+
+- Sessions auto-expire after **30 minutes of inactivity**, keeping conversations focused
+- Gemini auto-generates a **human-readable session title** from the first query (e.g., *"Exploring Quantum Computing"*)
+- History is aggregated with **message counts and source counts** for easy scanning
+
+---
+
+## 🏛 Architecture
+
+### The Search & Intelligence Pipeline
+
+```
+User Query
+    │
+    ├── RAM Cache Hit? ──────────────────────► Return in 0ms ($0 cost)
+    │
+    ├── Greeting? ───────────────────────────► Lightweight response (no API call)
+    │
+    ▼
+search_service.py
+    │   Fetches top 5 Google Search results
+    ▼
+llm_service.py
+    │   Compiles: query + search results + chat history → master prompt
+    ▼
+Gemini 2.5 Flash ──(failover)──► Gemini 1.5 Pro
+    │
+    ▼
+Single JSON Response
+    ├── Detailed Answer (with sources)
+    └── 3 Smart Follow-up Questions
+```
+
+### Authentication Flow
+
+```
+User Login (Firebase Auth)
+    │
+    ▼
+ID Token (JWT) — generated on device
+    │
+    ▼
+Bearer Token — attached to every backend request
+    │
+    ▼
+firebase_auth_service.py — verifies via Firebase Admin SDK
+    │
+    ▼
+Request Authorized → Logic Executes
+```
 
 ---
 
 ## 🛠 Tech Stack
 
-### 📱 Frontend (Mobile App - Flutter)
-- **Framework:** Flutter (Dart)
-- **State Management:** BLoC (Business Logic Component) Architecture
-- **Routing:** Standard Named Routes (`AppRoutes`)
-- **Theme Constraints:** Bespoke glass-themed aesthetic featuring bespoke gradient mapping and clean Material elevations.
-- **Packages:** `flutter_bloc`, `firebase_auth`, `flutter_markdown`, `google_fonts`, `share_plus`
+### Frontend
+| | Technology | Purpose |
+|---|---|---|
+| 📱 | **Flutter (Dart)** | Cross-platform: Android, iOS & Web from one codebase |
+| 🧠 | **BLoC / Cubit** | Predictable, immutable state management |
+| 🎨 | **Glassmorphism 2.0** | Frosted glass + high-elevation Material cards |
+| ✍️ | **Google Fonts (Poppins)** | Clean, modern, highly legible typography |
 
-### ⚙️ Backend (API Layer - Python)
-- **Framework:** FastAPI (Uvicorn)
-- **AI Models:** Google Gemini (`gemini-2.5-flash`, `gemini-1.5-pro` failover pipelines)
-- **Search Engine:** Google Custom Search JSON API
-- **Middleware:** Custom singleton MemoryCache structure for $0 scaling limits and optimized throughput.
-- **Packages:** `google-generativeai`, `fastapi`, `firebase-admin`, `pydantic`
+### Backend
+| | Technology | Purpose |
+|---|---|---|
+| ⚙️ | **FastAPI + Uvicorn** | Async, high-performance Python API server |
+| 🤖 | **Gemini 2.5 Flash / 1.5 Pro** | Multi-model failover AI pipeline |
+| 💾 | **MemoryCache Singleton** | RAM-based interceptor for $0-cost scaling |
+| 🔍 | **Google Custom Search API** | Real-time web result fetching |
 
-### ☁️ Infrastructure & Auth
-- **Authentication:** Firebase Auth (Email/Password integrated via backend tokens)
-- **Database:** Firebase Cloud Firestore (NoSQL Document Store)
+### Infrastructure
+| | Technology | Purpose |
+|---|---|---|
+| 🔐 | **Firebase Auth** | JWT / Bearer token security |
+| 🗄️ | **Cloud Firestore** | NoSQL document store for persistence |
+| 🐳 | **Docker + Docker Compose** | Containerized, consistent deployment |
+| ☁️ | **AWS EC2** | Production cloud hosting |
 
 ---
 
-## 🚀 How to Run Locally
+## 📂 Project Structure
+
+```
+seekr/
+├── lib/                          # Flutter Frontend
+│   ├── core/
+│   │   ├── services/
+│   │   │   └── api_config.dart   # Base URL & environment toggle
+│   │   └── themes/               # Global design tokens
+│   ├── features/
+│   │   ├── authentication/       # Login, Signup, Auth Gate
+│   │   ├── chat/                 # Main search & chat interface
+│   │   ├── collections/          # Bookmarks & folders
+│   │   ├── history/              # Session history
+│   │   └── profile/              # User profile
+│   └── main.dart
+│
+├── server/                       # FastAPI Backend
+│   ├── services/
+│   │   ├── chat_service.py       # Core chat orchestration
+│   │   ├── llm_service.py        # Gemini integration & failover
+│   │   ├── search_service.py     # Google Search integration
+│   │   ├── cache_service.py      # MemoryCache Singleton
+│   │   ├── collections_service.py
+│   │   └── firebase_auth_service.py
+│   └── main.py                   # API endpoints & middleware
+│
+├── assets/
+│   └── images/
+│       └── app_icon.png
+│
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── deployment_guide.md
+└── README.md
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
-Before running Seekr, ensure you have the following installed:
-1. [Flutter SDK](https://docs.flutter.dev/get-started/install) 
-2. [Python 3.10+](https://www.python.org/downloads/)
-3. A Google Cloud Console project (for Firebase Admin Keys, Gemini API key, and Custom Search API Key)
 
-### 1. Setup Backend (FastAPI)
-1. Open a terminal and navigate to the backend directory:
-   ```bash
-   cd server
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # (Windows)
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Set up your hidden credentials!
-   You will need to ensure your keys are configured (typically housed in your `.env` or `config.py` structure):
-   - `GEMINI_API_KEY`
-   - `GOOGLE_SEARCH_API_KEY`
-   - `GOOGLE_CSE_ID`
-   - **Firebase Admin SDK JSON**: Make sure to place your Firebase Admin Credentials internally where `firebase_config.py` can locate them.
-5. Boot the server using Uvicorn:
-   ```bash
-   uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-### 2. Setup Frontend (Flutter)
-1. Open a new terminal and navigate to the root working directory where `/lib` is located.
-   ```bash
-   cd seekr
-   ```
-2. Fetch Dart packages:
-   ```bash
-   flutter pub get
-   ```
-3. Ensure the Flutter app is correctly pointing to your local Python API (`http://10.0.2.2:8000` for Android Emulator, or `http://127.0.0.1:8000` for iOS Simulators). Update your network client inside your Data layers if necessary.
-4. Launch the application!
-   ```bash
-   flutter run
-   ```
+- [Flutter SDK 3.x+](https://docs.flutter.dev/get-started/install)
+- [Python 3.10+](https://www.python.org/downloads/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) *(for deployment)*
+- API Keys: **Google Gemini**, **Google Custom Search**, **Firebase Admin**
 
 ---
 
-## 📂 Architecture Overview
+### Backend Setup
 
-Seekr uses Clean Architecture principles.
-- **Presentation**: UI specific files (Pages, Components, Modals) and BLoC Cubit definitions to intercept interactions.
-- **Domain/Data**: Handles outbound connections (`AuthRepo`, `ChatService`, `CollectionsService`), bridging Dart to your Python API Layer via standard REST.
-- **Backend Services**: The backend utilizes Thread Pooling (`run_in_threadpool`) so the FastAPI UI thread isn't intentionally blocked while waiting on Gemini to generate Markdown bodies.
+```bash
+# 1. Navigate to server directory
+cd server
+
+# 2. Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate        # macOS/Linux
+venv\Scripts\activate           # Windows
+
+# 3. Install dependencies
+pip install -r requirements.txt
+```
+
+**Create your `.env` file in the project root:**
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_API_KEY=your_google_search_api_key
+GOOGLE_CSE_ID=your_custom_search_engine_id
+FIREBASE_CREDENTIALS=server/firebase_cred.json
+```
+
+**Place your Firebase credentials:**
+```bash
+# Download from: Firebase Console → Project Settings → Service Accounts → Generate New Private Key
+# Save the file as: server/firebase_cred.json
+```
+
+**Start the server:**
+```bash
+uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Verify at: `http://localhost:8000/docs`
 
 ---
-*Built with ❤️ utilizing Flutter and FastAPI.*
+
+### Frontend Setup
+
+```bash
+# 1. Install Flutter dependencies
+flutter pub get
+
+# 2. Point the app to your backend
+# Edit: lib/core/services/api_config.dart
+# Set baseUrl to your machine's LAN IP (for physical device testing)
+
+# 3. Run the app
+flutter run
+```
+
+---
+
+## ☁️ Deployment
+
+
+```bash
+# On your EC2 instance
+git clone https://github.com/SakinaKheraj/Seekr.git
+cd Seekr
+
+# Add your .env file and server/firebase_cred.json
+# Then:
+docker-compose up --build -d
+```
+
+Update `api_config.dart` with your EC2 public IP and rebuild the Flutter app to go live.
+
+---
+
+## 🔧 Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| `Connection Refused` | Ensure server is running; verify `baseUrl` in `api_config.dart` matches your LAN or EC2 IP |
+| `Quota Exceeded` | Daily message limit reached; reset in Firestore or adjust the cap in `server/main.py` |
+| `Firebase Error` | Confirm `firebase_cred.json` is in `server/` and the path in `.env` is correct |
+| `Gemini API Error` | Check your `GEMINI_API_KEY`; the pipeline auto-fails over to Gemini 1.5 Pro |
+| LF/CRLF warnings on Windows | Safe to ignore — Git line-ending normalization only |
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes: `git commit -m 'feat: describe your change'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Open a Pull Request
+
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**Built with clean architecture and engineering excellence.**
+
+*Every layer of the stack. Every design decision. Every line of code.*
+
+<br/>
+
+⭐ **If Seekr impressed you, drop a star — it means a lot.** ⭐
+
+</div>
