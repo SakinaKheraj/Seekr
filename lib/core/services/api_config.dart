@@ -6,7 +6,7 @@ class ApiConfig {
   // PRODUCTION: Set useProduction = true and put your EC2 IP/domain here
   // ─────────────────────────────────────────────────────────────────────
   static const bool useProduction = true;
-  static const String prodUrl = 'http://16.170.196.76';
+  static const String prodUrl = 'https://seekr-mz2m.onrender.com/';
 
   // ─────────────────────────────────────────────────────────────────────
   // LOCAL DEV on a REAL PHYSICAL DEVICE (USB debugging):
