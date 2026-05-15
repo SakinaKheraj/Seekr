@@ -5,6 +5,7 @@ import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/features/collections/presentation/cubits/collections_cubit.dart';
 import 'package:seekr/features/collections/presentation/cubits/collections_state.dart';
 import 'package:seekr/features/collections/data/models/bookmark_model.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -270,7 +271,7 @@ class _CollectionsView extends StatelessWidget {
                                   subtitle: Padding(
                                     padding: const EdgeInsets.only(top: 6),
                                     child: Text(
-                                      item.answer,
+                                      item.answer.replaceAll(RegExp(r'[*_#`>]'), ''), // Simple strip for preview
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.poppins(
@@ -355,15 +356,17 @@ class _CollectionsView extends StatelessWidget {
                                                           CrossAxisAlignment
                                                               .start,
                                                       children: [
-                                                        Text(
-                                                          item.answer,
-                                                          style:
-                                                              GoogleFonts.poppins(
-                                                                fontSize: 15,
-                                                                color: MyColors
-                                                                    .primaryText,
-                                                                height: 1.6,
-                                                              ),
+                                                        MarkdownBody(
+                                                          data: item.answer,
+                                                          selectable: true,
+                                                          styleSheet: MarkdownStyleSheet(
+                                                            p: GoogleFonts.poppins(
+                                                              fontSize: 15,
+                                                              color: MyColors.primaryText,
+                                                              height: 1.6,
+                                                            ),
+                                                            strong: const TextStyle(fontWeight: FontWeight.bold),
+                                                          ),
                                                         ),
                                                         if (item
                                                             .sources
