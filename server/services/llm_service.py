@@ -62,9 +62,7 @@ def _call_model(prompt: str) -> str:
             msg = f"{model_name}: {str(e)}"
             last_errors.append(msg)
             print(f" [LLM] {msg}")
-            # Quota hit — no point trying other models
-            if "429" in msg or "quota" in msg.lower():
-                break
+            continue
 
     summary = "\n".join(last_errors)
     if "429" in summary or "quota" in summary.lower():
