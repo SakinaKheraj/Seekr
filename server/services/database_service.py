@@ -76,18 +76,34 @@ def save_chat_sync(
 def get_history_sync(user_id: str, limit: int = 10):
     db = get_firestore_client()
 
-    query = (
-        db.collection("chats")
-        .where(filter=firestore.FieldFilter("user_id", "==", user_id))
-        .order_by("timestamp", direction=firestore.Query.DESCENDING)
-    )
+    try:
+        # 1. Try optimized query (Requires index for order_by)
+        query = (
+            db.collection("chats")
+            .where(filter=firestore.FieldFilter("user_id", "==", user_id))
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        )
 
-    if limit:
-        query = query.limit(limit)
+        if limit:
+            query = query.limit(limit)
 
-    docs = query.stream()
-
-    return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        docs = query.stream()
+        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        
+    except Exception as e:
+        # 2. Fallback: Query by user_id ONLY and sort in memory (No index needed)
+        print(f" INFO: History list falling back to memory sort. Error: {str(e)}")
+        query = db.collection("chats").where(filter=firestore.FieldFilter("user_id", "==", user_id))
+        
+        # We can't use limit() safely here if we want the LATEST messages without an index,
+        # so we fetch all and slice. (Safe for small history, but necessary for fallback)
+        docs = query.stream()
+        msgs = [{"id": doc.id, **doc.to_dict()} for doc in docs]
+        
+        # Sort by timestamp descending
+        msgs.sort(key=lambda x: x.get("timestamp") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        
+        return msgs[:limit] if limit else msgs
 
 
 # ---------------- ASYNC WRAPPERS ---------------- #
