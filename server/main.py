@@ -41,8 +41,8 @@ app = FastAPI(title='SeekrAI')
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 firebase_config.initialize_firebase()
@@ -78,10 +78,11 @@ async def chat(
         )
 
     except Exception as e:
-        logger.error(f"CHAT ERROR for user {user['uid'][:8]}...: {e}")
+        logger.error(f"CHAT ERROR: {str(e)}")
+        # Return the actual error message to help debugging
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=f"Backend Error: {str(e)}"
         )
 
     

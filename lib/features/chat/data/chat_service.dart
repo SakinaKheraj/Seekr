@@ -106,8 +106,9 @@ class ChatService {
             'too-many-requests'
             );
         } else if(statusCode != null && statusCode >= 500) {
+          final detail = e.response?.data is Map ? e.response?.data['detail'] : null;
           return ChatException(
-            'Server error. Pls try again later',
+            detail ?? 'Server error. Pls try again later',
             'server-error'
             );
         }
