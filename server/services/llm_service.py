@@ -1,205 +1,167 @@
-import google.generativeai as genai
+import json
 import time
+import google.generativeai as genai
 from server.config import GEMINI_API_KEY
 from typing import List
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Free-tier quota order (highest daily quota first):
-# gemini-2.0-flash:   1500 RPD, 15 RPM  ← best free tier option
-# gemini-2.5-flash:   250 RPD,  10 RPM
-# gemini-1.5-flash:   1500 RPD, 15 RPM  ← second best
-# gemini-1.5-flash-8b: 1500 RPD, 15 RPM
-# gemini-1.0-pro:     --- (limited)
-# gemini-1.5-pro is EXCLUDED: only 50 RPD free — not worth the fallback slot
+# ── Model fallback order ──────────────────────────────────────────────────────
+# Ordered by free-tier daily quota (highest first).
+# gemini-2.0-flash:    1500 RPD, 15 RPM  ← primary
+# gemini-1.5-flash:    1500 RPD, 15 RPM  ← solid backup
+# gemini-1.5-flash-8b: 1500 RPD, 15 RPM  ← lightweight backup
+# gemini-2.5-flash:     250 RPD, 10 RPM  ← quality fallback (low quota)
+# gemini-1.0-pro:       limited           ← last resort
+# gemini-1.5-pro EXCLUDED: only 50 RPD free — not worth a fallback slot
 MODELS_TO_TRY = [
-    'gemini-2.0-flash',    # Best free tier: 1500 RPD, 15 RPM
-    'gemini-2.5-flash',    # 250 RPD, 10 RPM — premium quality fallback
-    'gemini-1.5-flash',    # 1500 RPD, 15 RPM — solid backup
-    'gemini-1.5-flash-8b', # 1500 RPD, 15 RPM — lightweight backup
-    'gemini-1.0-pro'       # Last resort
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-2.5-flash',
+    'gemini-1.0-pro',
 ]
 
+# ── Shared generation logic ───────────────────────────────────────────────────
 
-def generate_ai_response(prompt: str) -> str:
-    last_error_info = []
+def _call_model(prompt: str) -> str:
+    """
+    Tries each model in fallback order and returns the raw text response.
+    Raises a clear exception on quota exhaustion or total failure.
+    Extracted to avoid duplicating the retry loop in every function.
+    """
+    last_errors = []
 
     for model_name in MODELS_TO_TRY:
         try:
-            print(f" TRACK: Attempting AI response with {model_name}...")
+            print(f" [LLM] Trying {model_name}...")
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
 
             if not response or not response.candidates:
-                msg = f"{model_name}: no candidates returned."
-                print(f" {msg}")
-                last_error_info.append(msg)
+                last_errors.append(f"{model_name}: no candidates returned.")
                 continue
 
             candidate = response.candidates[0]
             finish_reason = str(getattr(candidate, 'finish_reason', ''))
 
-            # STOP = success
-            if finish_reason not in ('FinishReason.STOP', 'STOP', '1'):
-                msg = f"{model_name}: blocked/incomplete. Reason: {finish_reason}"
-                print(f" {msg}")
-                last_error_info.append(msg)
+            if candidate.finish_reason == 3:  # SAFETY block
+                last_errors.append(f"{model_name}: blocked by safety filters.")
                 continue
 
-            try:
-                text = response.text
-                if text:
-                    print(f" SUCCESS with {model_name}")
-                    return text
-            except Exception as e:
-                msg = f"{model_name}: text extraction failed: {str(e)}"
-                print(f" {msg}")
-                last_error_info.append(msg)
+            if finish_reason not in ('FinishReason.STOP', 'STOP', '1'):
+                last_errors.append(f"{model_name}: incomplete. Reason: {finish_reason}")
                 continue
+
+            text = response.text
+            if text:
+                print(f" [LLM] Success with {model_name}")
+                return text
 
         except Exception as e:
-            msg = f"{model_name} error: {str(e)}"
-            print(f" {msg}")
-            last_error_info.append(msg)
-            continue
+            msg = f"{model_name}: {str(e)}"
+            last_errors.append(msg)
+            print(f" [LLM] {msg}")
+            # Quota hit — no point trying other models
+            if "429" in msg or "quota" in msg.lower():
+                break
 
-    error_summary = "\n".join(last_error_info)
-    if "429" in error_summary or "quota" in error_summary.lower():
-        raise Exception("API Quota Exceeded 🛑\nYou have reached the Gemini free tier limit. Please wait a minute and try again.")
-    raise Exception(f"AI models failed to respond. Please try again.")
+    summary = "\n".join(last_errors)
+    if "429" in summary or "quota" in summary.lower():
+        raise Exception(
+            "Daily API quota reached. Please wait a few minutes and try again."
+        )
+    raise Exception("All AI models failed to respond. Please try again.")
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+def generate_ai_response(prompt: str) -> str:
+    """Simple text generation — used for drafts and direct LLM calls."""
+    return _call_model(prompt)
 
 
 def build_prompt(query: str, search_results: list, include_followups: bool = False) -> str:
+    """
+    Builds the master prompt sent to Gemini.
+    Optimized for token efficiency — snippets capped at 200 chars (was 300),
+    source formatting tightened to reduce prompt size.
+    """
     context = ""
     for i, r in enumerate(search_results[:3], start=1):
-        context += f"""
-Source {i}:
-Title: {r['title']}
-Snippet: {r.get('snippet', '')[:300]}
-URL: {r['link']}
----
-"""
+        snippet = r.get('snippet', '')[:200]  # reduced from 300
+        context += f"[{i}] {r['title']}: {snippet} ({r['link']})\n"
 
-    prompt = f"""
-You are Seekr, a helpful AI assistant. 
-Answer the question using the sources provided below as your primary reference.
-
-Guidelines:
-1. If the sources are relevant, use them to provide a detailed and accurate answer.
-2. If the sources are irrelevant or don't fully answer the user's question (especially for follow-up questions like "give an example"), use the provided 'Previous chats' history and your own general knowledge to give a proper response.
-3. Be concise, friendly, and helpful. 
-4. Do NOT mention source numbers or say "Source 1 says...". Just provide the information naturally.
+    prompt = f"""You are Seekr, a concise and accurate AI assistant.
+Answer the question using the sources below as your primary reference.
+Be direct and helpful. Do not mention source numbers or say "Source 1 says".
+If sources are irrelevant, use your general knowledge.
 
 Question: {query}
 
 Sources:
-{context}
-"""
+{context}"""
+
     if include_followups:
         prompt += """
-IMPORTANT: You MUST respond ONLY with a raw, valid JSON object matching the exact schema below! Do not add any markdown formatting, code blocks, or conversational text.
 
-{
-  "answer": "Your detailed answer here based on the sources...",
-  "followups": [
-    "Short related question 1?",
-    "Short related question 2?",
-    "Short related question 3?"
-  ]
-}
-"""
+Reply ONLY with this exact JSON — no markdown, no extra text:
+{"answer": "your answer here", "followups": ["question 1?", "question 2?", "question 3?"]}"""
+
     return prompt
 
 
 def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
-    """Generates an AI response and extracts follow-up questions to save requests."""
-    last_error_info = []
+    """
+    Single API call that returns both the answer and 3 follow-up questions.
+    Parses the JSON response and falls back gracefully if JSON is malformed.
+    """
+    raw = _call_model(prompt)
 
-    for model_name in MODELS_TO_TRY:
-        try:
-            print(f" TRACK: Attempting AI response with {model_name}...")
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
+    try:
+        # Strip markdown code fences if model ignores the instruction
+        clean = raw.strip()
+        if clean.startswith("```json"):
+            clean = clean.split("```json", 1)[-1].split("```")[0].strip()
+        elif clean.startswith("```"):
+            clean = clean.split("```", 1)[-1].split("```")[0].strip()
 
-            if not response or not response.candidates:
-                msg = f"{model_name}: no candidates returned."
-                print(f" {msg}")
-                last_error_info.append(msg)
-                continue
+        payload = json.loads(clean)
+        answer = payload.get("answer", "").strip()
+        followups = payload.get("followups", [])
 
-            candidate = response.candidates[0]
-            if candidate.finish_reason == 3: # SAFETY
-                msg = f"{model_name}: blocked by safety filters."
-                print(f" {msg}")
-                last_error_info.append(msg)
-                continue
+        # Ensure exactly 3 follow-ups
+        while len(followups) < 3:
+            followups.append("")
 
-            try:
-                full_text = response.text
-                if not full_text:
-                    continue
+        print(f" [LLM] JSON batch payload parsed successfully.")
+        return answer, followups[:3]
 
-                import json
-                try:
-                    # Strip out Markdown JSON block wrappers if the model ignores the instruction
-                    clean_json = full_text.strip()
-                    if clean_json.startswith("```json"):
-                        clean_json = clean_json.split("```json")[-1].split("```")[0].strip()
-                    elif clean_json.startswith("```"):
-                        clean_json = clean_json.split("```")[-1].split("```")[0].strip()
-
-                    payload = json.loads(clean_json)
-                    answer = payload.get("answer", "").strip()
-                    followups = payload.get("followups", [])
-                except json.JSONDecodeError as e:
-                    # Fallback if AI entirely fails to produce valid JSON
-                    answer = full_text
-                    followups = []
-
-                # pad with empty strings up to 3 to satisfy UI expectations if AI provides fewer
-                while followups and len(followups) < 3:
-                    followups.append("")
-
-                print(f" SUCCESS with {model_name} (JSON BATCH PAYLOAD)")
-                return answer, followups[:3]
-
-            except Exception as e:
-                msg = f"{model_name}: text extraction failed: {str(e)}"
-                print(f" {msg}")
-                last_error_info.append(msg)
-                continue
-
-        except Exception as e:
-            msg = f"{model_name} error: {str(e)}"
-            print(f" {msg}")
-            last_error_info.append(msg)
-            continue
-
-    error_summary = "\n".join(last_error_info)
-    if "429" in error_summary or "quota" in error_summary.lower():
-        raise Exception("API Quota Exceeded 🛑\nYou have reached the Gemini free tier limit. Please wait a minute and try again.")
-    raise Exception(f"AI models failed to respond. Please try again.")
+    except json.JSONDecodeError:
+        # Graceful fallback — return raw text as answer with no follow-ups
+        print(f" [LLM] JSON parse failed, returning raw text as answer.")
+        return raw, ["", "", ""]
 
 
 def generate_session_title(first_query: str) -> str:
-    """Simple non-AI title generation to save quota."""
-    # Take first 6 words and capitalize
+    """
+    Generates a human-readable session title from the first query.
+    Pure string operation — no AI call, zero quota cost.
+    """
     words = first_query.split()
     title = " ".join(words[:6])
     if len(words) > 6:
         title += "..."
-    # capitalize first letter
     return title[:1].upper() + title[1:] if title else "New Session"
 
 
 def generate_draft(text: str, format: str) -> str:
-    """Transform search results into specific professional formats."""
+    """Transforms research content into a specific professional format."""
     templates = {
-        "email": f"Draft a professional email based on this information. Include a clear subject line and a structured body with a greeting and sign-off. Information: {text}",
-        "linkedin": f"Draft a highly engaging LinkedIn post based on this information. Use a scroll-stopping hook, emojis, and relevant hashtags. Information: {text}",
-        "markdown": f"Format this information into a high-quality Markdown report. Use headers, bullet points, and clean structure. Information: {text}",
-        "summary": f"Provide a brief, executive summary of this information in 3-5 high-impact bullet points. Information: {text}"
+        "email": f"Write a professional email based on this information. Include a subject line, greeting, structured body, and sign-off. Keep it concise. Information: {text}",
+        "linkedin": f"Write an engaging LinkedIn post based on this information. Use a strong hook, emojis, and 3-5 relevant hashtags. Information: {text}",
+        "markdown": f"Format this information as a clean Markdown report with headers, bullet points, and clear structure. Information: {text}",
+        "summary": f"Write a concise executive summary of this information in 3-5 high-impact bullet points. Information: {text}",
     }
-    
     prompt = templates.get(format, templates["summary"])
     return generate_ai_response(prompt)
