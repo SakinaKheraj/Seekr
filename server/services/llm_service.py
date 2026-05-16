@@ -80,24 +80,24 @@ def generate_ai_response(prompt: str) -> str:
 
 
 def build_prompt(query: str, search_results: list, include_followups: bool = False) -> str:
-    """
-    Builds the master prompt sent to Gemini.
-    Optimized for token efficiency — snippets capped at 200 chars (was 300),
-    source formatting tightened to reduce prompt size.
-    """
     context = ""
     for i, r in enumerate(search_results[:3], start=1):
-        snippet = r.get('snippet', '')[:200]  # reduced from 300
+        snippet = r.get('snippet', '')[:200]
         context += f"[{i}] {r['title']}: {snippet} ({r['link']})\n"
 
-    prompt = f"""You are Seekr, a concise and accurate AI assistant.
-Answer the question using the sources below as your primary reference.
-Be direct and helpful. Do not mention source numbers or say "Source 1 says".
-If sources are irrelevant, use your general knowledge.
+    prompt = f"""You are Seekr, a knowledgeable and friendly AI assistant.
+Answer the question directly and confidently using your knowledge and the sources below.
+
+Critical rules:
+- NEVER say "the provided sources", "based on the sources", "the sources don't mention" or any variation of this
+- NEVER reveal that you are using search results or sources
+- If sources are not helpful, answer from your own knowledge naturally
+- Always give a direct, confident answer — never say you don't have enough information
+- Be concise, warm, and helpful
 
 Question: {query}
 
-Sources:
+Reference material:
 {context}"""
 
     if include_followups:
