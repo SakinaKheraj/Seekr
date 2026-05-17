@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:seekr/core/routes/app_routes.dart';
 import 'package:seekr/core/theme/colors.dart';
 import 'package:seekr/core/widgets/glass_text_field.dart';
@@ -581,6 +582,102 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            if (sources.isNotEmpty && !isUser) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Sources:',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: MyColors.secondaryText,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: sources.map((s) => _SourceChip(source: s)).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceChip extends StatelessWidget {
+  final Map<String, dynamic> source;
+
+  const _SourceChip({required this.source});
+
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leaving the app'),
+        content: const Text('Are you sure you want to open this link? You will be leaving the app.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Open'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final uri = Uri.parse(urlString);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open link')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = source['title'] as String? ?? 'Source';
+    final link = source['link'] as String? ?? '';
+
+    return GestureDetector(
+      onTap: () {
+        if (link.isNotEmpty) {
+          _launchUrl(context, link);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: MyColors.backgroundMid,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MyColors.glassBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.link, size: 12, color: MyColors.gradient2),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: MyColors.gradient2,
+                ),
               ),
             ),
           ],

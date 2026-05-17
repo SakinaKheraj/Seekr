@@ -32,20 +32,21 @@ Widget build(BuildContext context) {
         );
       }
     },
-    child: Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              MyColors.backgroundStart,
-              MyColors.backgroundMid,
-              MyColors.backgroundEnd,
-            ],
-          ),
+    child: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            MyColors.backgroundStart,
+            MyColors.backgroundMid,
+            MyColors.backgroundEnd,
+          ],
         ),
-        child: SafeArea(
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               child: Padding(

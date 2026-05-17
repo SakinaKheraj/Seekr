@@ -101,10 +101,18 @@ Reference material:
 {context}"""
 
     if include_followups:
-        prompt += """
+    prompt += """
 
 Reply ONLY with this exact JSON — no markdown, no extra text:
-{"answer": "your answer here", "followups": ["question 1?", "question 2?", "question 3?"]}"""
+{"answer": "your answer here", "followups": ["question 1?", "question 2?", "question 3?"]}
+
+Rules for followups:
+- Generate 3 questions the user might want to ask NEXT about this TOPIC
+- Questions must be ABOUT THE SUBJECT, never about the user's personal preferences
+- Never ask "what is your budget", "what do you prefer", "what's your favorite"
+- Good example: "How does X compare to Y?", "What are the main use cases of X?"
+- Bad example: "What's your preferred X?", "What's your budget for X?"
+- Make questions short (under 10 words) and directly tied to the topic"""
 
     return prompt
 
