@@ -101,7 +101,7 @@ Reference material:
 {context}"""
 
     if include_followups:
-    prompt += """
+        prompt += """
 
 Reply ONLY with this exact JSON — no markdown, no extra text:
 {"answer": "your answer here", "followups": ["question 1?", "question 2?", "question 3?"]}
