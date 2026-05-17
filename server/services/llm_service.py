@@ -132,7 +132,34 @@ def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
         elif clean.startswith("```"):
             clean = clean.split("```", 1)[-1].split("```")[0].strip()
 
-        payload = json.loads(clean)
+        # First attempt: direct parse
+        try:
+            payload = json.loads(clean)
+        except json.JSONDecodeError:
+            # Second attempt: fix unescaped newlines inside JSON string values
+            import re
+            fixed = re.sub(r'(?<=": ")(.*?)(?="[,\s]*"followups")', 
+                          lambda m: m.group(0).replace('\n', '\\n').replace('\r', '\\r'), 
+                          clean, flags=re.DOTALL)
+            try:
+                payload = json.loads(fixed)
+            except json.JSONDecodeError:
+                # Third attempt: regex extraction
+                answer_match = re.search(r'"answer"\s*:\s*"(.*?)"(?:\s*,\s*"followups")', clean, re.DOTALL)
+                followup_match = re.search(r'"followups"\s*:\s*\[(.*?)\]', clean, re.DOTALL)
+                
+                if answer_match:
+                    answer = answer_match.group(1).replace('\\n', '\n').replace('\\"', '"')
+                    followups = []
+                    if followup_match:
+                        followups = re.findall(r'"([^"]+)"', followup_match.group(1))
+                    while len(followups) < 3:
+                        followups.append("")
+                    print(f" [LLM] Regex extraction successful.")
+                    return answer.strip(), followups[:3]
+                
+                raise  # re-raise if regex also failed
+
         answer = payload.get("answer", "").strip()
         followups = payload.get("followups", [])
 
@@ -144,7 +171,7 @@ def generate_answer_and_followups(prompt: str) -> tuple[str, List[str]]:
         return answer, followups[:3]
 
     except json.JSONDecodeError:
-        # Graceful fallback — return raw text as answer with no follow-ups
+        # Final fallback — return raw text as answer with no follow-ups
         print(f" [LLM] JSON parse failed, returning raw text as answer.")
         return raw, ["", "", ""]
 
