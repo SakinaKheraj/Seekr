@@ -89,10 +89,10 @@ def build_prompt(query: str, search_results: list, include_followups: bool = Fal
 Answer the question directly and confidently using your knowledge and the sources below.
 
 Critical rules:
-- NEVER say "the provided sources", "based on the sources", "the sources don't mention" or any variation of this
+- NEVER say "the provided sources", "based on the sources", "the sources don't mention" or any variation
 - NEVER reveal that you are using search results or sources
 - If sources are not helpful, answer from your own knowledge naturally
-- Always give a direct, confident answer — never say you don't have enough information
+- Always give a direct, confident answer
 - Be concise, warm, and helpful
 
 Question: {query}
@@ -110,9 +110,9 @@ Rules for followups:
 - Generate 3 questions the user might want to ask NEXT about this TOPIC
 - Questions must be ABOUT THE SUBJECT, never about the user's personal preferences
 - Never ask "what is your budget", "what do you prefer", "what's your favorite"
-- Good example: "How does X compare to Y?", "What are the main use cases of X?"
-- Bad example: "What's your preferred X?", "What's your budget for X?"
-- Make questions short (under 10 words) and directly tied to the topic"""
+- Good: "How does X compare to Y?", "What are the main use cases of X?"
+- Bad: "What's your preferred X?", "What's your budget?"
+- Keep questions short (under 10 words)"""
 
     return prompt
 
