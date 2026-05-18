@@ -4,9 +4,20 @@ import 'package:seekr/features/authentication/domain/repos/auth_repo.dart';
 
 class DraftingService {
   final AuthRepo _authRepo;
-  final Dio _dio = Dio();
+  final Dio _dio;
 
-  DraftingService({required AuthRepo authRepo}) : _authRepo = authRepo;
+  DraftingService({
+    Dio? dio,
+    required AuthRepo authRepo,
+  })  : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 60),
+                receiveTimeout: const Duration(seconds: 60),
+              ),
+            ),
+        _authRepo = authRepo;
 
   Future<String> generateDraft({required String text, required String format}) async {
     try {
@@ -21,6 +32,8 @@ class DraftingService {
         },
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       );
 

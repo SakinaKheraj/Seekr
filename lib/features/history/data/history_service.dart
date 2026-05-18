@@ -24,8 +24,8 @@ class HistoryService {
             Dio(
               BaseOptions(
                 baseUrl: ApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 30),
+                connectTimeout: const Duration(seconds: 60),
+                receiveTimeout: const Duration(seconds: 60),
               ),
             ),
         _authRepo = authRepo;
@@ -51,7 +51,7 @@ class HistoryService {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
-          sendTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
         ),
       );

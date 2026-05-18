@@ -10,7 +10,7 @@ class ApiConfig {
   static const String prodUrlMobile =
       'http://16.170.196.76'; // Android → EC2 (fast)
 
-  static const bool useProduction = true;
+  static const bool useProduction = !kDebugMode;
   static const String devPhysicalDeviceUrl = 'http://192.168.31.120:8000';
 
   static String get baseUrl {

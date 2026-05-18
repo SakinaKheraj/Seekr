@@ -7,8 +7,17 @@ class CollectionsService {
   final Dio _dio;
   final AuthRepo _authRepo;
 
-  CollectionsService({Dio? dio, required AuthRepo authRepo})
-      : _dio = dio ?? Dio(),
+  CollectionsService({
+    Dio? dio,
+    required AuthRepo authRepo,
+  })  : _dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiConfig.baseUrl,
+                connectTimeout: const Duration(seconds: 60),
+                receiveTimeout: const Duration(seconds: 60),
+              ),
+            ),
         _authRepo = authRepo;
 
   Future<Map<String, List<BookmarkItem>>> getCollections() async {
@@ -20,8 +29,8 @@ class CollectionsService {
         '${ApiConfig.baseUrl}/collections',
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
-          sendTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       );
 
@@ -31,7 +40,7 @@ class CollectionsService {
       final Map<String, List<BookmarkItem>> result = {};
       foldersObj.forEach((key, value) {
         if (value is List) {
-          result[key] = (value as List).map((e) => BookmarkItem.fromJson(e as Map<String, dynamic>)).toList();
+          result[key] = value.map((e) => BookmarkItem.fromJson(e as Map<String, dynamic>)).toList();
         }
       });
       return result;
