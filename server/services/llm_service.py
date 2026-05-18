@@ -9,18 +9,18 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 # ── Model fallback order ──────────────────────────────────────────────────────
 # Ordered by free-tier daily quota (highest first).
-# gemini-2.0-flash:    1500 RPD, 15 RPM  ← primary
-# gemini-1.5-flash:    1500 RPD, 15 RPM  ← solid backup
-# gemini-1.5-flash-8b: 1500 RPD, 15 RPM  ← lightweight backup
-# gemini-2.5-flash:     250 RPD, 10 RPM  ← quality fallback (low quota)
-# gemini-1.0-pro:       limited           ← last resort
-# gemini-1.5-pro EXCLUDED: only 50 RPD free — not worth a fallback slot
+# gemini-2.0-flash:      active primary
+# gemini-2.0-flash-lite: solid lightweight fallback
+# gemini-2.5-flash:      high quality fallback
+# gemini-2.5-flash-lite: backup fallback
+# gemini-3.1-flash-lite: latest flash-lite fallback
+# (Older 1.5-flash and 1.0-pro have been deprecated and return 404)
 MODELS_TO_TRY = [
     'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash-lite',
     'gemini-2.5-flash',
-    'gemini-1.0-pro',
+    'gemini-2.5-flash-lite',
+    'gemini-3.1-flash-lite',
 ]
 
 # ── Shared generation logic ───────────────────────────────────────────────────
@@ -66,11 +66,24 @@ def _call_model(prompt: str) -> str:
             continue
 
     summary = "\n".join(last_errors)
-    if "429" in summary or "quota" in summary.lower():
+    
+    # 1. Check for limit: 0 or key validation issues
+    if "limit: 0" in summary or "billing details" in summary.lower() or "check your plan" in summary.lower():
         raise Exception(
-            "Daily API quota reached. Please wait a few minutes and try again."
+            "AI service is temporarily unavailable. Please try again later."
         )
-    raise Exception("All AI models failed to respond. Please try again.")
+        
+    # 2. Check for temporary Rate Limit (RPM/TPM) vs Daily Quota (RPD)
+    if "429" in summary or "quota" in summary.lower():
+        if "perminute" in summary.lower() or "tokens" in summary.lower() or "rate" in summary.lower():
+            raise Exception(
+                "Rate limit reached. Please wait 60 seconds and try again."
+            )
+        raise Exception(
+            "Daily service limit reached. Please try again tomorrow."
+        )
+        
+    raise Exception("All AI models failed to respond. Please check your network connection and try again.")
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
