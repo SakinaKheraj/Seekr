@@ -3,6 +3,7 @@ import time
 import google.generativeai as genai
 from server.config import GEMINI_API_KEY
 from typing import List
+from datetime import datetime
 
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -85,15 +86,19 @@ def build_prompt(query: str, search_results: list, include_followups: bool = Fal
         snippet = r.get('snippet', '')[:200]
         context += f"[{i}] {r['title']}: {snippet} ({r['link']})\n"
 
+    current_date = datetime.now().strftime("%B %d, %Y")
+
     prompt = f"""You are Seekr, a knowledgeable and friendly AI assistant.
-Answer the question directly and confidently using your knowledge and the sources below.
+Today's date is {current_date}. You are operating in real-time.
+
+Answer the question directly and confidently using the search results below as your primary source of truth.
 
 Critical rules:
-- NEVER say "the provided sources", "based on the sources", "the sources don't mention" or any variation
-- NEVER reveal that you are using search results or sources
-- If sources are not helpful, answer from your own knowledge naturally
-- Always give a direct, confident answer
-- Be concise, warm, and helpful
+- The search results reflect CURRENT, REAL information as of today
+- Always trust the search results over your training knowledge for recent events
+- NEVER say information is unavailable for a year that has already happened
+- NEVER say "the provided sources", "based on the sources" or reveal you use search
+- Be direct, confident, and helpful
 
 Question: {query}
 
